@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SeeYourData</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <header class="bar">
+    <img class="mark" src="../icons/icon-32.png" alt="" width="20" height="20">
+    <span class="brand">SeeYourData</span>
+    <span class="live" id="live" title="Updates while the page loads">Live</span>
+  </header>
+
+  <main id="app" aria-live="polite">
+    <p class="loading">Reading this page…</p>
+  </main>
+
+  <script type="module" src="popup.js"></script>
+</body>
+</html>
