@@ -11,7 +11,9 @@ SeeYourData is a free, open-source Chrome extension. Click its icon on any websi
 - **Details**: request counts, cookies, site storage, and how the grade is calculated.
 - A direct link to the site's **privacy policy**, when the page has one.
 
-![SeeYourData popup in light and dark mode](docs/screenshot.png)
+![SeeYourData popup: the grade and your data, the companies that receive it, and the privacy-policy check](docs/screenshot.png)
+
+*Left to right: what the page can learn about you, who receives it (including trackers hidden in the site's own domain), and what the privacy policy says and leaves out. Dark mode is supported too.*
 
 The toolbar badge shows how many tracking companies are on the current page, coloured by the grade.
 
