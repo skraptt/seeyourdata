@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "SeeYourData",
   "short_name": "SeeYourData",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "See which personal data the website you're on can collect, and which companies receive it.",
   "homepage_url": "https://github.com/skraptt/seeyourdata",
   "minimum_chrome_version": "111",

@@ -8,12 +8,15 @@ SeeYourData is a free, open-source Chrome extension. Click its icon on any websi
 - **Your data**: what the page can learn about you, such as a fingerprint of your device, your location, your clicks and typing, IDs that follow you across sites, or the details its forms ask for.
 - **Who gets it**: the companies this page sends data to (Google, Meta, Hotjar, ad exchanges…), what each one does, and which of their servers were contacted.
 - **Policy**: reads the site's privacy policy for you (in English, German or Turkish) and shows what it says it collects and why, the legal reasons it gives, which of your rights it explains, and how many of the things GDPR requires a privacy notice to include are actually there. It also lists **what the page does that the policy leaves out**, such as a session recorder the policy never names.
+- **Email the site**: when the page does something its policy leaves out, one click drafts a polite email to the site's privacy contact (found in the policy) with the evidence: which services, the exact servers your browser contacted, cookies, fingerprinting features, the date of your visit and the policy's address. It asks them to explain under GDPR Art. 13, optionally requests a copy of your data (Art. 15), and is available in English, German and Turkish. You edit it and send it from your own email app; SeeYourData never sends anything.
 - **Details**: request counts, cookies, site storage, and how the grade is calculated.
 - A direct link to the site's **privacy policy**, when the page has one.
 
 ![SeeYourData popup: the grade and your data, the companies that receive it, and the privacy-policy check](docs/screenshot.png)
 
 *Left to right: what the page can learn about you, who receives it (including trackers hidden in the site's own domain), and what the privacy policy says and leaves out. Dark mode is supported too.*
+
+![The email draft page, with the evidence filled in](docs/email-draft.png)
 
 The toolbar badge shows how many tracking companies are on the current page, coloured by the grade.
 
@@ -79,9 +82,10 @@ src/
   lib/
     analyze.js      observations -> report (grade, data kinds, companies)
     policy.js       privacy policy text -> summary and gaps
+    complaint.js    gaps -> evidence -> email draft (EN/DE/TR)
     trackers.js     tracker database
     domain.js       host / registrable-domain helpers
-popup/              the popup UI (HTML, CSS, JS, no frameworks)
+popup/              the popup UI and the email draft page (HTML, CSS, JS, no frameworks)
 icons/
   config.js         GitHub repository used by the report links
 tools/

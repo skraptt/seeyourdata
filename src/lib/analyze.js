@@ -222,6 +222,13 @@ export function analyze(raw) {
     companies: companyList,
     unknown,
     policyUrl: raw.policyUrl || null,
+    // Raw facts about sensitive browser features, for evidence in other languages.
+    // A source of '' means the site itself.
+    apis: Object.entries(apis).filter(([api]) => API_INFO[api]).map(([api, info]) => ({
+      id: api,
+      kind: API_INFO[api].kind,
+      by: [...new Set((info.sources || []).map((s) => (!s || getSite(s) === site ? '' : lookupTracker(s)?.company || s)))]
+    })),
     stats: {
       requests: Object.values(hosts).reduce((s, h) => s + (h.count || 0), 0),
       thirdPartySites: thirdPartySites.size,

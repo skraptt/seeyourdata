@@ -1,0 +1,93 @@
+/* Email draft page. Builds on popup.css tokens. */
+
+body.compose {
+  width: auto;
+  max-height: none;
+  min-height: 100vh;
+  font-size: 14px;
+}
+body.compose .bar { max-width: 720px; margin: 0 auto; padding: 18px 20px 0; }
+
+.compose-main { max-width: 720px; margin: 0 auto; padding: 8px 20px 48px; }
+
+.c-head h1 { font-size: 24px; letter-spacing: -0.02em; margin: 14px 0 6px; line-height: 1.2; }
+.c-head p { margin: 0 0 16px; color: var(--muted); max-width: 62ch; }
+
+.c-card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 14px 16px 12px;
+}
+.c-row {
+  display: grid;
+  grid-template-columns: 70px 1fr;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--line);
+}
+.c-row label { color: var(--muted); font-weight: 560; }
+.c-row input {
+  font: inherit;
+  color: var(--ink);
+  border: 0;
+  background: transparent;
+  padding: 6px 0;
+  width: 100%;
+}
+.c-row input:focus { outline: none; }
+.c-row:focus-within { border-bottom-color: var(--accent); }
+
+.c-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 20px;
+  align-items: center;
+  padding: 10px 0;
+}
+.c-select { display: inline-flex; align-items: center; gap: 8px; color: var(--muted); font-weight: 560; }
+.c-select select {
+  font: inherit;
+  color: var(--ink);
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 4px 8px;
+}
+.c-check { display: inline-flex; align-items: center; gap: 8px; }
+.c-check input { width: 16px; height: 16px; accent-color: var(--accent); }
+
+#body {
+  width: 100%;
+  font: 13.5px/1.55 ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  color: var(--ink);
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 12px 14px;
+  resize: vertical;
+}
+#body:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+.c-hint { margin: 8px 2px 0; font-size: 12.5px; color: var(--muted); }
+.c-hint.warn { color: var(--moderate); font-weight: 560; }
+
+.c-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 14px; }
+.c-status { color: var(--low); font-weight: 600; font-size: 13px; }
+
+.c-note {
+  margin-top: 22px;
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+}
+.c-note h2 { font-size: 14px; margin: 0 0 6px; }
+.c-note ul { margin: 0; padding-left: 18px; color: var(--muted); }
+.c-note li { margin: 4px 0; }
+
+@media (max-width: 520px) {
+  .c-head h1 { font-size: 20px; }
+  .c-row { grid-template-columns: 1fr; gap: 0; }
+}

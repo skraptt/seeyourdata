@@ -33,6 +33,7 @@ POLICY_HTML=b"""<!doctype html><html><head><title>Privacy Policy</title></head><
 <h2>Legal bases</h2><p>We rely on the performance of a contract and your consent.</p>
 <h2>Sharing</h2><p>We share data with service providers such as payment processors.</p>
 <h2>Your rights</h2><p>You have the right of access, rectification and erasure. You may withdraw your consent at any time.</p>
+<p>Questions? Contact our data protection officer at privacy@demo.test.</p>
 </main></body></html>"""
 TRACKER_JS=b"(function(){var c=document.createElement('canvas');c.width=300;c.height=60;var x=c.getContext('2d');x.fillText('fp',1,1);c.toDataURL();})();"
 
@@ -87,6 +88,14 @@ with sync_playwright() as p:
         pop.wait_for_selector('.pol-summary', timeout=15000)
         pop.click('details[data-key="pd:contact"] summary')
         pop.screenshot(path=f'{OUT}/policy-{scheme}.png',full_page=True)
+        with ctx.expect_page() as new_page:
+            pop.click('[data-action=email-site]')
+        comp = new_page.value; comp.emulate_media(color_scheme=scheme); comp.set_viewport_size({'width':900,'height':1100})
+        comp.wait_for_selector('#body', timeout=10000); time.sleep(0.3)
+        body = comp.input_value('#body')
+        print(scheme, 'EMAIL to=', comp.input_value('#to'), '| hotjar' if 'Hotjar' in body else '| NO HOTJAR', '| subject=', comp.input_value('#subject'))
+        comp.screenshot(path=f'{OUT}/compose-{scheme}.png', full_page=True)
+        comp.close()
         print(scheme, 'POLICY', pop.inner_text('.pol-summary h2'), '|', (pop.inner_text('.pol-gaps') if pop.query_selector('.pol-gaps') else 'no gaps').replace(chr(10), ' / '))
         print(scheme,'POPUP ERRORS',perr)
     ctx.close()

@@ -506,3 +506,5 @@ button, summary { font: inherit; color: inherit; }
 }
 
 .panel .notice { margin: 8px 0 0; }
+.email-btn { display: inline-flex; align-items: center; gap: 7px; margin-top: 10px; }
+.email-btn .icon { width: 16px; height: 16px; }

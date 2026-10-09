@@ -3,6 +3,7 @@ import { isWebUrl } from '../src/lib/domain.js';
 import { CATEGORIES } from '../src/lib/trackers.js';
 import { reportUrl } from '../src/config.js';
 import { analyzePolicy } from '../src/lib/policy.js';
+import { collectEvidence } from '../src/lib/complaint.js';
 
 const app = document.getElementById('app');
 const live = document.getElementById('live');
@@ -41,7 +42,8 @@ const ICONS = {
   check: '<path d="M5 12.5l4.5 4.5L19 7"/>',
   dash: '<path d="M7 12h10"/>',
   alert: '<path d="M12 4l9 16H3z"/><path d="M12 10v4"/><path d="M12 17.2v.3"/>',
-  doc: '<path d="M7 3h7l5 5v13H7z"/><path d="M14 3v5h5M10 13h6M10 17h6"/>'
+  doc: '<path d="M7 3h7l5 5v13H7z"/><path d="M14 3v5h5M10 13h6M10 17h6"/>',
+  mail: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3.5 6.5l8.5 6.5 8.5-6.5"/>'
 };
 const icon = (name, cls = 'icon') =>
   raw(`<svg class="${cls}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[name] || ''}</svg>`);
@@ -261,6 +263,7 @@ function wire() {
       if (!r) return;
       if (b.dataset.action === 'read-policy') readPolicy(r.policyUrl, false);
       if (b.dataset.action === 'read-page') readPolicy(r.url, true);
+      if (b.dataset.action === 'email-site') openEmailDraft(r);
       if (b.dataset.action === 'policy-reset') { policy = { ...policy, status: 'idle', text: '', error: '' }; rerender(); }
     });
   }
@@ -420,6 +423,7 @@ function policyPanel(r) {
       <h3>${icon('alert')}On this page, but not in the policy</h3>
       <ul>${each(a.gaps, (g) => html`<li>${g.text}</li>`)}</ul>
       <p class="fine">The policy might still cover these with general wording such as “our partners”.</p>
+      <button type="button" class="btn primary email-btn" data-action="email-site">${icon('mail')}Email ${r.site} about this</button>
     </section>`) : raw('')}
 
     ${raw(policyGroup('What they say they collect', 'pd', a.data))}
@@ -436,6 +440,15 @@ function policyPanel(r) {
     <p class="limits">Read automatically by looking for key words in English, German and Turkish. It can miss or misread things, and it isn’t legal advice. Tap a line to see the sentence it’s based on.</p>
     <button type="button" class="btn link" data-action="policy-reset">Read a different page</button>
   `;
+}
+
+// Prepares the evidence and opens the email draft page in a new tab.
+async function openEmailDraft(r) {
+  const analysis = analyzePolicy(policy.text, { companies: r.companies, kinds: r.kinds });
+  const evidence = collectEvidence({ report: r, analysis, policyText: policy.text, policyUrl: policy.url, observedAt: lastData?.startedAt || Date.now() });
+  const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+  await chrome.storage.session.set({ ['draft:' + id]: evidence });
+  chrome.tabs.create({ url: chrome.runtime.getURL('popup/compose.html?id=' + id) });
 }
 
 function policyGroup(title, prefix, items) {
