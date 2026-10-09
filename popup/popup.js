@@ -1,6 +1,7 @@
 import { analyze, plural } from '../src/lib/analyze.js';
 import { isWebUrl } from '../src/lib/domain.js';
 import { CATEGORIES } from '../src/lib/trackers.js';
+import { reportUrl } from '../src/config.js';
 
 const app = document.getElementById('app');
 const live = document.getElementById('live');
@@ -9,6 +10,7 @@ let tabId = null;
 let pageUrl = '';
 let lastJson = '';
 let activeTab = 'collects';
+let currentSite = '';
 const open = new Set(); // keys of expanded rows, kept across live refreshes
 
 // ---- Tiny safe templating ----------------------------------------------------
@@ -93,6 +95,7 @@ function render(data) {
   const scroll = document.scrollingElement.scrollTop;
 
   const r = data.report;
+  currentSite = r.site;
   const fresh = data.startedAt && Date.now() - data.startedAt < 15000;
   live.hidden = !fresh;
 
@@ -182,6 +185,7 @@ function companyRow(c) {
           <dt>Servers contacted</dt><dd>${c.domains.join(', ')}</dd>
           <dt>Set cookies</dt><dd>${c.setsCookies ? 'Yes' : 'No'}</dd>
         </dl>
+        <a class="report" href="${reportUrl({ domain: c.domains[0], seenOn: currentSite, company: c.name })}" target="_blank" rel="noopener noreferrer">Something wrong here? Suggest a correction</a>
       </div>
     </details>`;
 }
@@ -197,8 +201,8 @@ function unknownBlock(list) {
         ${icon('chevron', 'icon chev')}
       </summary>
       <div class="row-body">
-        <p class="about">Often the site’s own CDNs or services. Each one still sees your IP address. If you recognise a tracker here, please add it to the project.</p>
-        <ul class="hosts">${each(list, (u) => html`<li><span>${u.host}</span><span class="muted">${u.requests}${u.setsCookies ? ' · cookie' : ''}</span></li>`)}</ul>
+        <p class="about">Often the site’s own CDNs or services. Each one still sees your IP address. Spot a tracker? Report it and it can be added for everyone. You’ll review the form on GitHub before anything is sent.</p>
+        <ul class="hosts">${each(list, (u) => html`<li><span class="host">${u.host}<small class="muted">${u.requests} req${u.setsCookies ? ', sets a cookie' : ''}</small></span><a class="report-btn" href="${reportUrl({ domain: u.host, seenOn: currentSite })}" target="_blank" rel="noopener noreferrer" title="Suggest ${u.host} for the tracker list on GitHub" aria-label="Report ${u.host} as a tracker">Report</a></li>`)}</ul>
       </div>
     </details>`;
 }

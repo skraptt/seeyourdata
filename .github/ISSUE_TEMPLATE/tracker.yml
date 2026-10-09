@@ -1,0 +1,49 @@
+name: Add or correct a tracker
+description: Suggest a server for the tracker list, or fix what we say about one.
+title: "New tracker: "
+labels: ["tracker-list"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for helping. Fields below may already be filled in by the SeeYourData popup.
+        Please don't paste full page addresses: they can contain personal information. A domain is enough.
+  - type: input
+    id: domain
+    attributes:
+      label: Server domain
+      description: The domain of the outside server, e.g. `sync.example-dsp.com`.
+    validations:
+      required: true
+  - type: input
+    id: seen-on
+    attributes:
+      label: Seen on
+      description: One or more websites where it appeared, e.g. `news-site.com`.
+  - type: input
+    id: company
+    attributes:
+      label: Company
+      description: Who runs it, if you know.
+  - type: dropdown
+    id: category
+    attributes:
+      label: What does it do?
+      options:
+        - Advertising
+        - Session recording
+        - Device fingerprinting
+        - Social network
+        - Analytics
+        - Chat & marketing
+        - Performance monitoring
+        - Cookie consent
+        - Payments
+        - Fonts, media & embeds
+        - It's the website's own server (not a tracker)
+        - I don't know
+  - type: textarea
+    id: notes
+    attributes:
+      label: Evidence or notes
+      description: A link to the company's docs, a blocklist entry, or what you noticed.

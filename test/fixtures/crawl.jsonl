@@ -1,0 +1,3 @@
+{"url":"https://a-news.com/","finalUrl":"https://www.a-news.com/","ok":true,"hosts":{"www.a-news.com":{"count":20},"static.hotjar.com":{"count":2},"sync.example-dsp.net":{"count":3,"cookies":1,"types":{"image":3},"paths":["/usersync"]},"fp.newfp.io":{"count":1,"types":{"script":1},"paths":["/agent.js"]}},"apis":{"canvas":["fp.newfp.io"],"audio":["fp.newfp.io"]}}
+{"url":"https://b-shop.com/","ok":true,"hosts":{"b-shop.com":{"count":9},"sync.example-dsp.net":{"count":1,"cookies":1,"types":{"image":1},"paths":["/usersync"]},"fp.newfp.io":{"count":1,"types":{"script":1}},"only-once.io":{"count":1}},"apis":{"canvas":["fp.newfp.io"]}}
+{"url":"https://broken.com/","ok":false,"error":"timeout","hosts":{}}

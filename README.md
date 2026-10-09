@@ -77,8 +77,12 @@ src/
     domain.js       host / registrable-domain helpers
 popup/              the popup UI (HTML, CSS, JS, no frameworks)
 icons/
+  config.js         GitHub repository used by the report links
+tools/
+  crawl.py          visits many sites, records outside servers
+  rank.js           ranks them and writes a worklist of unknown ones
 test/
-  analyze.test.js   unit tests (node --test)
+  *.test.js         unit tests (node --test)
   e2e.py            loads the extension in Chromium against a demo page
 ```
 
@@ -88,9 +92,27 @@ python test/e2e.py shots/   # end-to-end, needs: pip install playwright && playw
 npm run package             # builds seeyourdata.zip for the Chrome Web Store
 ```
 
+## Growing the tracker list
+
+The list in `src/lib/trackers.js` is written by this project and is MIT licensed like the code. It grows in two ways.
+
+**Crawling popular websites.** `tools/crawl.py` visits many sites in a throwaway browser and records every outside server they contact, plus which scripts used fingerprinting features. `tools/rank.js` then ranks the servers by how many sites use them and writes a worklist of the ones we don't know yet, each with a ready-to-edit line and a suggested category.
+
+```sh
+pip install playwright && playwright install chromium
+python tools/crawl.py --tranco 500 --accept-consent   # top 500 sites from the Tranco list
+node tools/rank.js crawl-out/crawl.jsonl              # writes crawl-out/candidates.md and .csv
+```
+
+Use `--accept-consent` when crawling from the EU or UK: most large sites load no trackers until the cookie banner is accepted. The crawler clicks "Accept all" in its own empty browser profile, never yours. `rank.js` also prints how much outside traffic the current list recognises, so you can see coverage improve.
+
+**Reports from users.** In the popup's "Who gets it" tab, every unknown server has a **Report** button, and every company has a "Suggest a correction" link. They open a pre-filled GitHub issue (`.github/ISSUE_TEMPLATE/tracker.yml`) containing only the server's domain and the website's domain. Nothing is sent until the person reviews and submits the form on GitHub.
+
+If you fork the project, set your repository in `src/config.js` so these links point to it.
+
 ## Contributing
 
-The most valuable contribution is **growing the tracker list** in `src/lib/trackers.js`. See [CONTRIBUTING.md](CONTRIBUTING.md).
+The most valuable contribution is **growing the tracker list**. See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 Ideas on the roadmap:
 

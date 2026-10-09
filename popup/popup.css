@@ -305,7 +305,22 @@ button, summary { font: inherit; color: inherit; }
 .facts dd { margin: 0; overflow-wrap: anywhere; }
 .hosts { list-style: none; margin: 0; padding: 0; font-size: 12px; }
 .hosts li { display: flex; justify-content: space-between; gap: 8px; padding: 3px 0; border-top: 1px solid var(--line); }
-.hosts li span:first-child { overflow-wrap: anywhere; }
+.hosts li { align-items: center; }
+.host { overflow-wrap: anywhere; min-width: 0; }
+.host small { display: block; font-size: 11px; }
+.report-btn {
+  flex: none;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--accent);
+  text-decoration: none;
+  padding: 2px 8px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+}
+.report-btn:hover { border-color: var(--accent); }
+.report { display: inline-block; margin-top: 8px; font-size: 12px; color: var(--accent); text-decoration: none; }
+.report:hover { text-decoration: underline; }
 .muted { color: var(--muted); white-space: nowrap; }
 
 .none { color: var(--muted); padding: 10px 4px; margin: 0; }

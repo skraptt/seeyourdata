@@ -17,6 +17,17 @@ Thanks for helping people see who collects their data. Issues and pull requests 
 3. Run `npm test`. It checks for typos, unknown categories and duplicate domains.
 4. In the pull request, link a source: the vendor's documentation, a public blocklist entry, or a network capture showing the domain on a real site.
 
+## Finding new trackers with the crawler
+
+1. `python tools/crawl.py --tranco 500 --accept-consent` (or `--sites your-list.txt`).
+2. `node tools/rank.js crawl-out/crawl.jsonl`
+3. Open `crawl-out/candidates.md`. For each server, find out who runs it (its homepage, privacy policy or WHOIS), correct the company and category, and paste the line into `TRACKERS`. Skip servers that are a website's own infrastructure.
+4. Run `npm test` and mention the crawl (date, number of sites, coverage before and after) in your pull request.
+
+## Handling issues from the popup's Report button
+
+Issues labelled `tracker-list` come from the popup. Check the domain the same way as above. If it's a tracker, add it and close the issue with the commit. If it's a site's own server, close it with a short note.
+
 ## Changing detection or the popup
 
 - Keep `src/lib/analyze.js` free of browser APIs so it stays unit-testable. Add a test in `test/analyze.test.js` for new behaviour.

@@ -67,7 +67,7 @@ with sync_playwright() as p:
         if scheme=='light':
             pop.click('details.sev-3 summary')  # expand first row
         pop.screenshot(path=f'{OUT}/popup-{scheme}.png',full_page=True)
-        pop.click('[data-tab=companies]'); time.sleep(0.2); pop.click('details.company summary')
+        pop.click('[data-tab=companies]'); time.sleep(0.2); pop.click('details.unknown summary'); pop.click('details.company summary')
         pop.screenshot(path=f'{OUT}/companies-{scheme}.png',full_page=True)
         pop.click('[data-tab=details]'); pop.screenshot(path=f'{OUT}/details-{scheme}.png',full_page=True)
         print(scheme,'POPUP ERRORS',perr)
