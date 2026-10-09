@@ -34,6 +34,11 @@ POLICY_HTML=b"""<!doctype html><html><head><title>Privacy Policy</title></head><
 <h2>Sharing</h2><p>We share data with service providers such as payment processors.</p>
 <h2>Your rights</h2><p>You have the right of access, rectification and erasure. You may withdraw your consent at any time.</p>
 <p>Questions? Contact our data protection officer at privacy@demo.test.</p>
+<h2>Cookies</h2><p>We use cookies that are necessary for the shopping cart and checkout to work. With your consent we also use cookies to measure how our website is used and to show you relevant offers. You can change your cookie settings at any time using the link in the footer of every page.</p>
+<h2>Retention</h2><p>We keep order data for ten years because tax law requires it. Account data is deleted when you close your account. Server log files are deleted after fourteen days.</p>
+<h2>Transfers</h2><p>Some of our service providers are located outside the European Economic Area. In those cases we rely on standard contractual clauses approved by the European Commission to protect your data.</p>
+<h2>Complaints</h2><p>You have the right to lodge a complaint with a supervisory authority, in particular in the member state where you live or work.</p>
+<h2>Changes</h2><p>We may update this privacy policy when our services or the law change. The date at the top of this page shows when it was last updated. Please check it from time to time.</p>
 </main></body></html>"""
 TRACKER_JS=b"(function(){var c=document.createElement('canvas');c.width=300;c.height=60;var x=c.getContext('2d');x.fillText('fp',1,1);c.toDataURL();})();"
 

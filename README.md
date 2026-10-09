@@ -14,13 +14,15 @@ SeeYourData is a free, open-source Chrome extension. Click its icon on any websi
 
 ![SeeYourData popup: the grade and your data, the companies that receive it, and the privacy-policy check](docs/screenshot.png)
 
-*Left to right: what the page can learn about you, who receives it (including trackers hidden in the site's own domain), and what the privacy policy says and leaves out. Dark mode is supported too.*
+*Left to right: what the page can learn about you, who receives it (including trackers hidden in the site's own domain), and what the privacy policy says and leaves out. Dark mode is supported too, as the Turkish example below shows.*
 
 ![The email draft page, with the evidence filled in](docs/email-draft.png)
 
 The toolbar badge shows how many tracking companies are on the current page, coloured by the grade.
 
 **Languages:** English, Deutsch and Türkçe. SeeYourData starts in your browser's language; switch it any time with the language menu at the top of the popup.
+
+![SeeYourData in German (light mode) and Turkish (dark mode)](docs/languages.png)
 
 ## Install
 
