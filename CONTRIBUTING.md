@@ -17,6 +17,16 @@ Thanks for helping people see who collects their data. Issues and pull requests 
 3. Run `npm test`. It checks for typos, unknown categories and duplicate domains.
 4. In the pull request, link a source: the vendor's documentation, a public blocklist entry, or a network capture showing the domain on a real site.
 
+## Adding a pattern for tracker code hidden in a site
+
+Some sites serve a tracker's code from their own domain. Those are matched by URL path with `SCRIPT_PATTERNS` in `src/lib/trackers.js`:
+
+```js
+{ id: 'example', company: 'Example Analytics', category: 'analytics', pattern: /\/example-analytics(?:[-.][\w.-]*)?\.js$/i },
+```
+
+Patterns see only the path (no query string). Make them specific: a pattern that also matches ordinary files would wrongly accuse a site, so add both a matching and a non-matching example to the tests in `test/analyze.test.js`.
+
 ## Finding new trackers with the crawler
 
 1. `python tools/crawl.py --tranco 500 --accept-consent` (or `--sites your-list.txt`).

@@ -14,6 +14,8 @@ PAGE=b"""<!doctype html><html><head><title>Demo Shop</title>
 <script src="http://connect.facebook.net/en_US/fbevents.js"></script>
 <script src="http://www.google-analytics.com/analytics.js"></script>
 <script src="http://cdn.mystery-cdn.io/lib.js"></script>
+<script src="/vendor/@amplitude/analytics-browser.min.js"></script>
+<img src="/akam/13/pixel_abc">
 </head><body><h1>Checkout</h1>
 <form><label>Email <input type=email name=email></label>
 <input name=phone placeholder="Phone number"><input autocomplete="cc-number" name=cc>
@@ -67,7 +69,7 @@ with sync_playwright() as p:
         if scheme=='light':
             pop.click('details.sev-3 summary')  # expand first row
         pop.screenshot(path=f'{OUT}/popup-{scheme}.png',full_page=True)
-        pop.click('[data-tab=companies]'); time.sleep(0.2); pop.click('details.unknown summary'); pop.click('details.company summary')
+        pop.click('[data-tab=companies]'); time.sleep(0.2); pop.click('details.unknown summary'); pop.click('details[data-key="c:Amplitude"] summary')
         pop.screenshot(path=f'{OUT}/companies-{scheme}.png',full_page=True)
         pop.click('[data-tab=details]'); pop.screenshot(path=f'{OUT}/details-{scheme}.png',full_page=True)
         print(scheme,'POPUP ERRORS',perr)

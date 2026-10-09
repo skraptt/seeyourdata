@@ -1,7 +1,7 @@
 // Turns the raw observations for one tab into the report the popup shows.
 // Pure function, no browser APIs, so it can be unit tested with `npm test`.
 
-import { CATEGORIES, lookupTracker } from './trackers.js';
+import { CATEGORIES, lookupTracker, scriptPatternById } from './trackers.js';
 import { getSite } from './domain.js';
 
 /** The kinds of personal data we report on, in the user's words. */
@@ -76,25 +76,36 @@ export function analyze(raw) {
   const companies = new Map();
   const unknown = [];
   const cookieSetters = [];
-  for (const [host, info] of Object.entries(hosts)) {
-    if (getSite(host) === site) continue;
-    if (info.cookies) cookieSetters.push(host);
-    const t = lookupTracker(host);
-    if (!t) {
-      unknown.push({ host, requests: info.count || 0, setsCookies: !!info.cookies });
-      continue;
-    }
+  const addCompany = (t, host, requests, cookies, selfHosted) => {
     let c = companies.get(t.company);
     if (!c) {
-      c = { name: t.company, categories: [], domains: [], requests: 0, setsCookies: false, data: new Set() };
+      c = { name: t.company, categories: [], domains: [], selfHosted: [], requests: 0, setsCookies: false, data: new Set() };
       companies.set(t.company, c);
     }
     if (!c.categories.includes(t.category)) c.categories.push(t.category);
-    c.domains.push(host);
-    c.requests += info.count || 0;
-    c.setsCookies ||= !!info.cookies;
+    const list = selfHosted ? c.selfHosted : c.domains;
+    if (!list.includes(host)) list.push(host);
+    c.requests += requests;
+    c.setsCookies ||= cookies;
     for (const k of CATEGORIES[t.category].data) c.data.add(k);
-    if (info.cookies) c.data.add('identifiers');
+    if (cookies) c.data.add('identifiers');
+  };
+
+  for (const [host, info] of Object.entries(hosts)) {
+    const firstParty = getSite(host) === site;
+
+    // Tracker code recognised by file name, often served from the site's own domain.
+    const sdkIds = Object.keys(info.sdks || {});
+    for (const id of sdkIds) {
+      const t = scriptPatternById(id);
+      if (t) addCompany(t, host, info.sdks[id], false, true);
+    }
+
+    if (firstParty) continue;
+    if (info.cookies) cookieSetters.push(host);
+    const t = lookupTracker(host);
+    if (t) addCompany(t, host, info.count || 0, !!info.cookies, false);
+    else if (!sdkIds.length) unknown.push({ host, requests: info.count || 0, setsCookies: !!info.cookies });
   }
 
   const companyList = [...companies.values()]

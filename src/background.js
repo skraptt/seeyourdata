@@ -7,6 +7,7 @@
 
 import { getHost, getSite, isWebUrl } from './lib/domain.js';
 import { analyze } from './lib/analyze.js';
+import { lookupTracker, matchScriptPattern } from './lib/trackers.js';
 
 const MAX_HOSTS = 400;
 const tabs = new Map(); // tabId -> state (in-memory cache)
@@ -83,6 +84,16 @@ async function record(tabId, url, type) {
   }
   h.count++;
   h.types[type] = (h.types[type] || 0) + 1;
+  // Tracker code served from an address we don't know (often the site's own).
+  if (!lookupTracker(host)) {
+    let path = '';
+    try { path = new URL(url).pathname; } catch { /* ignore */ }
+    const hit = matchScriptPattern(path);
+    if (hit) {
+      h.sdks ||= {};
+      h.sdks[hit.id] = (h.sdks[hit.id] || 0) + 1;
+    }
+  }
   scheduleSave(tabId);
 }
 

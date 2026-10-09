@@ -33,6 +33,7 @@ Everything happens locally in your browser. SeeYourData makes no network request
 | What | How it's detected | File |
 | --- | --- | --- |
 | Companies receiving data | Every request the page makes is matched against a list of known tracker domains. Requests are only observed, never blocked or changed. | `src/background.js`, `src/lib/trackers.js` |
+| Trackers hidden in the site | Many sites serve tracker code from their own domain so it looks first-party and slips past ad blockers. SeeYourData also recognises tracker code by its file names and data paths (Amplitude, mParticle, Segment, Google tags, the Meta pixel, Adobe, Akamai and Cloudflare bot checks, and more). | `src/lib/trackers.js` (`SCRIPT_PATTERNS`) |
 | Tracking cookies | Responses from other websites that set a cookie. | `src/background.js` |
 | Device fingerprinting | Watches canvas read-back, WebGL GPU queries, audio fingerprinting, font probing, high-entropy client hints, battery and media-device listing, and notes which script used them. | `src/inject.js` |
 | Location, camera, microphone, clipboard | Same hooks as above. | `src/inject.js` |

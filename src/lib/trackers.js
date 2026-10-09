@@ -28,6 +28,12 @@ export const CATEGORIES = {
     data: ['device', 'identifiers'],
     about: 'Identifies your browser from its technical traits, which works even when you clear cookies.'
   },
+  'bot-protection': {
+    label: 'Bot protection',
+    weight: 3,
+    data: ['device'],
+    about: 'Checks that you are a person, not a bot, by examining your browser and device. Usually for security, but it reads many of the same details as fingerprinting.'
+  },
   social: {
     label: 'Social network',
     weight: 8,
@@ -174,9 +180,9 @@ export const TRACKERS = [
   { company: 'FingerprintJS', category: 'fingerprinting', domains: ['fpjs.io', 'fpcdn.io', 'fingerprint.com', 'fpapi.io'] },
   { company: 'LexisNexis (ThreatMetrix)', category: 'fingerprinting', domains: ['online-metrix.net'] },
   { company: 'Sift', category: 'fingerprinting', domains: ['sift.com', 'siftscience.com'] },
-  { company: 'HUMAN (PerimeterX)', category: 'fingerprinting', domains: ['px-cdn.net', 'perimeterx.net', 'px-cloud.net'] },
-  { company: 'DataDome', category: 'fingerprinting', domains: ['datadome.co'] },
-  { company: 'hCaptcha', category: 'fingerprinting', domains: ['hcaptcha.com'] },
+  { company: 'HUMAN (PerimeterX)', category: 'bot-protection', domains: ['px-cdn.net', 'perimeterx.net', 'px-cloud.net'] },
+  { company: 'DataDome', category: 'bot-protection', domains: ['datadome.co'] },
+  { company: 'hCaptcha', category: 'bot-protection', domains: ['hcaptcha.com'] },
 
   // ---- Consent management
   { company: 'OneTrust', category: 'consent', domains: ['onetrust.com', 'cookielaw.org'] },
@@ -353,15 +359,15 @@ export const TRACKERS = [
   { company: 'Cisco (AppDynamics)', category: 'performance', domains: ['eum-appdynamics.com'] },
 
   // ---- Fraud prevention, bot detection and CAPTCHAs (these fingerprint your device)
-  { company: 'Google', category: 'fingerprinting', domains: ['recaptcha.net'] },
-  { company: 'Cloudflare', category: 'fingerprinting', domains: ['challenges.cloudflare.com'] },
+  { company: 'Google', category: 'bot-protection', domains: ['recaptcha.net'] },
+  { company: 'Cloudflare', category: 'bot-protection', domains: ['challenges.cloudflare.com'] },
   { company: 'TransUnion (iovation)', category: 'fingerprinting', domains: ['iovation.com', 'iesnare.com'] },
   { company: 'Forter', category: 'fingerprinting', domains: ['forter.com'] },
   { company: 'Riskified', category: 'fingerprinting', domains: ['riskified.com'] },
   { company: 'Signifyd', category: 'fingerprinting', domains: ['signifyd.com'] },
   { company: 'Kount (Equifax)', category: 'fingerprinting', domains: ['kount.net', 'kaxsdc.com'] },
   { company: 'Mastercard (NuData)', category: 'fingerprinting', domains: ['nudatasecurity.com'] },
-  { company: 'Arkose Labs', category: 'fingerprinting', domains: ['arkoselabs.com', 'funcaptcha.com'] },
+  { company: 'Arkose Labs', category: 'bot-protection', domains: ['arkoselabs.com', 'funcaptcha.com'] },
   { company: 'BioCatch', category: 'fingerprinting', domains: ['biocatch.com'] },
   { company: 'SEON', category: 'fingerprinting', domains: ['seon.io'] },
   { company: 'Castle', category: 'fingerprinting', domains: ['castle.io'] },
@@ -408,6 +414,48 @@ export const TRACKERS = [
   { company: 'Trustpilot', category: 'content', domains: ['trustpilot.com'] },
   { company: 'Algolia', category: 'content', domains: ['algolia.net', 'algolianet.com'] }
 ];
+
+// Tracker code a website serves from its own domain, recognised by file name
+// or data path instead of server address. Many sites do this to make tracking
+// look first-party (and to get past ad blockers). Patterns are matched against
+// the URL path only, never the query string. Keep them specific: a pattern
+// that matches ordinary files would wrongly accuse a site.
+export const SCRIPT_PATTERNS = [
+  { id: 'amplitude', company: 'Amplitude', category: 'analytics', pattern: /@amplitude\/|\/amplitude(?:[-.][\w.-]*)?\.js$|\/2\/httpapi$/i },
+  { id: 'mparticle', company: 'mParticle (Rokt)', category: 'analytics', pattern: /@mparticle\/|\/mparticle(?:[-.][\w.-]*)?\.js$/i },
+  { id: 'segment', company: 'Segment (Twilio)', category: 'analytics', pattern: /\/analytics\.js\/v1\/|\/analytics-next\//i },
+  { id: 'rudderstack', company: 'RudderStack', category: 'analytics', pattern: /\/rudder-analytics(?:[-.][\w.-]*)?\.js$/i },
+  { id: 'mixpanel', company: 'Mixpanel', category: 'analytics', pattern: /\/mixpanel(?:[-.][\w.-]*)?\.js$/i },
+  { id: 'heap', company: 'Heap', category: 'analytics', pattern: /\/heap-\d+\.js$/i },
+  { id: 'posthog', company: 'PostHog', category: 'analytics', pattern: /\/posthog-js\/|\/posthog(?:[-.][\w.-]*)?\.js$/i },
+  { id: 'snowplow', company: 'Snowplow', category: 'analytics', pattern: /\/com\.snowplowanalytics\.snowplow\/tp2$|\/snowplow(?:[-.][\w.-]*)?\.js$/i },
+  { id: 'google-tag', company: 'Google', category: 'analytics', pattern: /\/gtag\/js$|\/gtm\.js$|\/g\/collect$/i },
+  { id: 'meta-pixel', company: 'Meta (Facebook)', category: 'social', pattern: /\/fbevents\.js$/i },
+  { id: 'hotjar', company: 'Hotjar', category: 'session-replay', pattern: /\/hotjar-\d+\.js$/i },
+  { id: 'adobe', company: 'Adobe', category: 'analytics', pattern: /\/AppMeasurement[\w.-]*\.js$|\/b\/ss\/[^/]+\/\d/i },
+  { id: 'tealium', company: 'Tealium', category: 'analytics', pattern: /\/utag(?:\.sync)?\.js$/i },
+  { id: 'optimizely', company: 'Optimizely', category: 'analytics', pattern: /\/optimizely[\w.-]*\.js$/i },
+  { id: 'matomo', company: 'Matomo (run by the site itself)', category: 'analytics', pattern: /\/(?:matomo|piwik)\.(?:js|php)$/i },
+  { id: 'shopify', company: 'Shopify', category: 'analytics', pattern: /\/\.well-known\/shopify\/monorail\/|\/trekkie[\w.-]*\.js$/i },
+  { id: 'prebid', company: 'Prebid (ad auctions)', category: 'advertising', pattern: /\/prebid[\w.-]*\.js$/i },
+  { id: 'akamai-bot', company: 'Akamai (Bot Manager)', category: 'bot-protection', pattern: /^\/akam\/\d+\//i },
+  { id: 'cloudflare-bot', company: 'Cloudflare', category: 'bot-protection', pattern: /^\/cdn-cgi\/challenge-platform\//i },
+  { id: 'vercel', company: 'Vercel', category: 'performance', pattern: /^\/_vercel\/(?:speed-)?insights\//i },
+  { id: 'sentry', company: 'Sentry', category: 'performance', pattern: /@sentry\/|\/sentry[\w.-]*\.js$/i },
+  { id: 'plausible', company: 'Plausible', category: 'performance', pattern: /\/plausible(?:\.[\w.-]+)?\.js$/i }
+];
+
+/** Finds a self-hosted tracker by URL path. Returns null for ordinary files. */
+export function matchScriptPattern(path) {
+  if (!path) return null;
+  for (const p of SCRIPT_PATTERNS) if (p.pattern.test(path)) return p;
+  return null;
+}
+
+const PATTERNS_BY_ID = new Map(SCRIPT_PATTERNS.map((p) => [p.id, p]));
+export function scriptPatternById(id) {
+  return PATTERNS_BY_ID.get(id) || null;
+}
 
 // Build a suffix index once: "doubleclick.net" -> entry
 const INDEX = new Map();

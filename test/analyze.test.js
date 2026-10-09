@@ -95,3 +95,39 @@ test('report never contains raw HTML from hostnames', () => {
   const r = analyze({ url: 'https://example.com/', hosts: { '<img>.evil.net': { count: 1 } } });
   assert.equal(r.unknown[0].host, '<img>.evil.net');
 });
+
+test('self-hosted tracker code is recognised by its path', async () => {
+  const { matchScriptPattern } = await import('../src/lib/trackers.js');
+  assert.equal(matchScriptPattern('/static/vendor/@amplitude/analytics-browser.min.js').id, 'amplitude');
+  assert.equal(matchScriptPattern('/akam/13/pixel_5e6a6164').id, 'akamai-bot');
+  assert.equal(matchScriptPattern('/images/amplitude-graph.png'), null);
+  assert.equal(matchScriptPattern('/blog/ss/notes'), null);
+  assert.equal(matchScriptPattern('/static/js/main.js'), null);
+});
+
+test('self-hosted trackers show up as companies on first-party hosts', () => {
+  const r = analyze({
+    url: 'https://weather.example/',
+    hosts: {
+      'weather.example': { count: 50, sdks: { amplitude: 1, mparticle: 1, 'akamai-bot': 2 } },
+      'cdn.weather.example': { count: 10 }
+    }
+  });
+  const names = r.companies.map((c) => c.name);
+  assert.ok(names.includes('Amplitude'));
+  assert.ok(names.includes('mParticle (Rokt)'));
+  assert.ok(names.includes('Akamai (Bot Manager)'));
+  const amp = r.companies.find((c) => c.name === 'Amplitude');
+  assert.deepEqual(amp.selfHosted, ['weather.example']);
+  assert.deepEqual(amp.domains, []);
+  assert.equal(r.unknown.length, 0);
+  assert.equal(r.stats.trackingCompanies, 2); // bot protection isn't counted as tracking
+  assert.ok(r.kinds.some((k) => k.id === 'browsing' && k.recipients.includes('Amplitude')));
+  assert.ok(r.score < 100 && r.score >= 85);
+});
+
+test('an unknown CDN serving tracker code is not listed as unknown', () => {
+  const r = analyze({ url: 'https://shop.example/', hosts: { 'cdn.somecdn.net': { count: 1, sdks: { 'meta-pixel': 1 } } } });
+  assert.equal(r.unknown.length, 0);
+  assert.equal(r.companies[0].name, 'Meta (Facebook)');
+});

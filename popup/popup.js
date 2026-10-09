@@ -170,22 +170,25 @@ function kindRow(k) {
 
 function companyRow(c) {
   const key = 'c:' + c.name;
+  const reportDomain = c.domains[0] || c.selfHosted[0];
   const main = c.categories.reduce((a, b) => (CATEGORIES[b].weight > CATEGORIES[a].weight ? b : a));
   return html`
     <details class="row company cat-${main}" data-key="${key}" ${raw(open.has(key) ? 'open' : '')}>
       <summary>
         <span class="avatar" aria-hidden="true">${c.name.slice(0, 1)}</span>
-        <span class="row-title">${c.name}<small>${c.categoryLabels.join(', ')}</small></span>
+        <span class="row-title">${c.name}<small>${c.categoryLabels.join(', ')}${c.selfHosted.length ? ', hidden in the site' : ''}</small></span>
         <span class="req" title="Requests from this page">${c.requests}</span>
         ${icon('chevron', 'icon chev')}
       </summary>
       <div class="row-body">
         <p class="about">${c.about}</p>
+        ${c.selfHosted.length ? raw(html`<p class="hidden-note">${icon('eye')}<span>${c.name}’s code is loaded from an address that isn’t ${c.name}’s own, so it looks like part of the site and is harder for ad blockers to spot.</span></p>`) : raw('')}
         <dl class="facts">
-          <dt>Servers contacted</dt><dd>${c.domains.join(', ')}</dd>
+          ${c.domains.length ? raw(html`<dt>Servers contacted</dt><dd>${c.domains.join(', ')}</dd>`) : raw('')}
+          ${c.selfHosted.length ? raw(html`<dt>Loaded from</dt><dd>${c.selfHosted.join(', ')}</dd>`) : raw('')}
           <dt>Set cookies</dt><dd>${c.setsCookies ? 'Yes' : 'No'}</dd>
         </dl>
-        <a class="report" href="${reportUrl({ domain: c.domains[0], seenOn: currentSite, company: c.name })}" target="_blank" rel="noopener noreferrer">Something wrong here? Suggest a correction</a>
+        <a class="report" href="${reportUrl({ domain: reportDomain, seenOn: currentSite, company: c.name })}" target="_blank" rel="noopener noreferrer">Something wrong here? Suggest a correction</a>
       </div>
     </details>`;
 }
