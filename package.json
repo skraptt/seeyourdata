@@ -1,6 +1,6 @@
 {
   "name": "seeyourdata",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Chrome extension that shows which personal data the website you're on can collect, and which companies receive it.",
   "private": true,
   "type": "module",
