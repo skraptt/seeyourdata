@@ -20,6 +20,8 @@ SeeYourData is a free, open-source Chrome extension. Click its icon on any websi
 
 The toolbar badge shows how many tracking companies are on the current page, coloured by the grade.
 
+**Languages:** English, Deutsch and Türkçe. SeeYourData starts in your browser's language; switch it any time with the language menu at the top of the popup.
+
 ## Install
 
 From source (until it's on the Chrome Web Store):
@@ -83,10 +85,12 @@ src/
     analyze.js      observations -> report (grade, data kinds, companies)
     policy.js       privacy policy text -> summary and gaps
     complaint.js    gaps -> evidence -> email draft (EN/DE/TR)
+    i18n.js         interface translations (English, German, Turkish)
     trackers.js     tracker database
     domain.js       host / registrable-domain helpers
 popup/              the popup UI and the email draft page (HTML, CSS, JS, no frameworks)
 icons/
+_locales/           extension name and description per language
   config.js         GitHub repository used by the report links
 tools/
   crawl.py          visits many sites, records outside servers

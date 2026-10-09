@@ -2,7 +2,7 @@
 trackers (all served locally), and saves popup screenshots.
 
     pip install playwright && playwright install chromium
-    python test/e2e.py /tmp/shots
+    python test/e2e.py /tmp/shots [en de tr]
 """
 import http.server, threading, socketserver, time, json, sys
 from playwright.sync_api import sync_playwright
@@ -70,32 +70,42 @@ with sync_playwright() as p:
     badge=sw.evaluate(f"chrome.action.getBadgeText({{tabId:{tab['id']}}})")
     print('BADGE',badge); print(json.dumps(state,indent=1)[:2500]); print('PAGE ERRORS',errors)
     extid=sw.url.split('/')[2]
-    for scheme in ('light','dark'):
-        pop=ctx.new_page(); pop.emulate_media(color_scheme=scheme); perr=[]
-        pop.on('pageerror',lambda e: perr.append(str(e)))
-        pop.set_viewport_size({'width':380,'height':600})
-        pop.goto(f'chrome-extension://{extid}/popup/popup.html?tabId={tab["id"]}'); time.sleep(1.2)
-        pop.evaluate("document.body.classList.remove('page')")
-        if scheme=='light':
-            pop.click('details.sev-3 summary')  # expand first row
-        pop.screenshot(path=f'{OUT}/popup-{scheme}.png',full_page=True)
-        pop.click('[data-tab=companies]'); time.sleep(0.2); pop.click('details.unknown summary'); pop.click('details[data-key="c:Amplitude"] summary')
-        pop.screenshot(path=f'{OUT}/companies-{scheme}.png',full_page=True)
-        pop.click('[data-tab=details]'); pop.screenshot(path=f'{OUT}/details-{scheme}.png',full_page=True)
-        pop.click('[data-tab=policy]'); time.sleep(0.2)
-        pop.screenshot(path=f'{OUT}/policy-intro-{scheme}.png',full_page=True)
-        if not pop.query_selector('.pol-summary'): pop.click('[data-action=read-policy]')  # second run uses the remembered result
-        pop.wait_for_selector('.pol-summary', timeout=15000)
-        pop.click('details[data-key="pd:contact"] summary')
-        pop.screenshot(path=f'{OUT}/policy-{scheme}.png',full_page=True)
-        with ctx.expect_page() as new_page:
-            pop.click('[data-action=email-site]')
-        comp = new_page.value; comp.emulate_media(color_scheme=scheme); comp.set_viewport_size({'width':900,'height':1100})
-        comp.wait_for_selector('#body', timeout=10000); time.sleep(0.3)
-        body = comp.input_value('#body')
-        print(scheme, 'EMAIL to=', comp.input_value('#to'), '| hotjar' if 'Hotjar' in body else '| NO HOTJAR', '| subject=', comp.input_value('#subject'))
-        comp.screenshot(path=f'{OUT}/compose-{scheme}.png', full_page=True)
-        comp.close()
-        print(scheme, 'POLICY', pop.inner_text('.pol-summary h2'), '|', (pop.inner_text('.pol-gaps') if pop.query_selector('.pol-gaps') else 'no gaps').replace(chr(10), ' / '))
-        print(scheme,'POPUP ERRORS',perr)
+    LANGS=[a for a in sys.argv[2:]] or ['en']
+    for lang in LANGS:
+        sw.evaluate(f"chrome.storage.local.set({{uiLang: '{lang}'}})")
+        OUTL=f'{OUT}/{lang}' if len(LANGS)>1 else OUT
+        import os; os.makedirs(OUTL, exist_ok=True)
+        for scheme in ('light','dark'):
+            pop=ctx.new_page(); pop.emulate_media(color_scheme=scheme); perr=[]
+            pop.on('pageerror',lambda e: perr.append(str(e)))
+            pop.set_viewport_size({'width':380,'height':600})
+            pop.goto(f'chrome-extension://{extid}/popup/popup.html?tabId={tab["id"]}'); time.sleep(1.2)
+            pop.evaluate("document.body.classList.remove('page')")
+            if scheme=='light':
+                pop.click('details.sev-3 summary')  # expand first row
+            pop.screenshot(path=f'{OUTL}/popup-{scheme}.png',full_page=True)
+            pop.click('[data-tab=companies]'); time.sleep(0.2); pop.click('details.unknown summary'); pop.click('details[data-key="c:Amplitude"] summary')
+            pop.screenshot(path=f'{OUTL}/companies-{scheme}.png',full_page=True)
+            pop.click('[data-tab=details]'); pop.screenshot(path=f'{OUTL}/details-{scheme}.png',full_page=True)
+            pop.click('[data-tab=policy]'); time.sleep(0.2)
+            pop.screenshot(path=f'{OUTL}/policy-intro-{scheme}.png',full_page=True)
+            if not pop.query_selector('.pol-summary'): pop.click('[data-action=read-policy]')  # second run uses the remembered result
+            pop.wait_for_selector('.pol-summary', timeout=15000)
+            pop.click('details[data-key="pd:contact"] summary')
+            pop.screenshot(path=f'{OUTL}/policy-{scheme}.png',full_page=True)
+            with ctx.expect_page() as new_page:
+                pop.click('[data-action=email-site]')
+            comp = new_page.value; comp.emulate_media(color_scheme=scheme); comp.set_viewport_size({'width':900,'height':1100})
+            comp.wait_for_selector('#body', timeout=10000); time.sleep(0.3)
+            body = comp.input_value('#body')
+            print(scheme, 'EMAIL to=', comp.input_value('#to'), '| hotjar' if 'Hotjar' in body else '| NO HOTJAR', '| subject=', comp.input_value('#subject'))
+            comp.screenshot(path=f'{OUTL}/compose-{scheme}.png', full_page=True)
+            comp.close()
+            print(scheme, 'POLICY', pop.inner_text('.pol-summary h2'), '|', (pop.inner_text('.pol-gaps') if pop.query_selector('.pol-gaps') else 'no gaps').replace(chr(10), ' / '))
+            print(scheme,'POPUP ERRORS',perr)
+    pop=ctx.new_page(); pop.set_viewport_size({'width':380,'height':600})
+    pop.goto(f'chrome-extension://{extid}/popup/popup.html?tabId={tab["id"]}'); time.sleep(1)
+    before=pop.inner_text('#tab-collects')
+    pop.select_option('#lang-switch','tr'); time.sleep(0.6)
+    print('SWITCH', before.split()[0:2], '->', pop.inner_text('#tab-collects').split()[0], '| saved:', sw.evaluate("chrome.storage.local.get('uiLang').then(r=>r.uiLang)"), '| html lang:', pop.evaluate('document.documentElement.lang'))
     ctx.close()

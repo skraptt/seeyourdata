@@ -1,4 +1,5 @@
-import { analyze, plural } from '../src/lib/analyze.js';
+import { analyze } from '../src/lib/analyze.js';
+import { t, setLang, getLang, detectLang, LANG_NAMES } from '../src/lib/i18n.js';
 import { isWebUrl } from '../src/lib/domain.js';
 import { CATEGORIES } from '../src/lib/trackers.js';
 import { reportUrl } from '../src/config.js';
@@ -48,11 +49,7 @@ const ICONS = {
 const icon = (name, cls = 'icon') =>
   raw(`<svg class="${cls}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[name] || ''}</svg>`);
 
-const STATUS = {
-  seen: { label: 'Seen', title: 'We saw this happen on this page' },
-  likely: { label: 'Likely', title: 'Based on what the companies on this page are known to do' },
-  asked: { label: 'Asked', title: 'The page asks you to enter this' }
-};
+const statusInfo = (s) => ({ label: t(`status.${s}`), title: t(`status.${s}.title`) });
 
 // ---- Data ------------------------------------------------------------------
 async function resolveTab() {
@@ -95,12 +92,12 @@ function rerender() {
 // ---- Rendering -------------------------------------------------------------
 function render(data) {
   if (data.error) {
-    app.innerHTML = html`<section class="empty"><h1>Couldn’t read this tab</h1><p>${data.error}</p><p>Reload the page and open SeeYourData again.</p></section>`;
+    app.innerHTML = html`<section class="empty"><h1>${t('err.title')}</h1><p>${data.error}</p><p>${t('err.hint')}</p></section>`;
     return;
   }
   if (data.empty) {
     live.hidden = true;
-    app.innerHTML = html`<section class="empty">${icon('shield', 'empty-icon')}<h1>Open a website to see what it collects</h1><p>SeeYourData checks regular web pages. Browser pages like this one don’t send your data anywhere.</p></section>`;
+    app.innerHTML = html`<section class="empty">${icon('shield', 'empty-icon')}<h1>${t('empty.title')}</h1><p>${t('empty.text')}</p></section>`;
     return;
   }
   // Keep keyboard focus where it was across live refreshes.
@@ -118,34 +115,34 @@ function render(data) {
 
   app.innerHTML = html`
     <section class="verdict level-${r.level}">
-      <div class="grade" aria-label="Privacy grade ${r.grade}">${r.grade}</div>
+      <div class="grade" aria-label="${t('gradeAria', { grade: r.grade })}">${r.grade}</div>
       <div class="verdict-text">
         <p class="site" title="${r.url}">${hostOf(r.url)}</p>
         <h1>${r.levelLabel}</h1>
         <p class="headline">${r.headline}</p>
       </div>
-      <div class="meter" role="img" aria-label="Score ${r.score} out of 100">
+      <div class="meter" role="img" aria-label="${t('scoreAria', { score: r.score })}">
         ${each(['A', 'B', 'C', 'D', 'F'], (g) => `<span class="seg${g === r.grade ? ' on' : ''}">${g}</span>`)}
       </div>
     </section>
 
-    ${data.partial ? raw(html`<p class="notice">This tab was open before SeeYourData started watching it. <button type="button" id="reload">Reload the page</button> for a complete report.</p>`) : raw('')}
+    ${data.partial ? raw(html`<p class="notice">${t('partial.before')}<button type="button" id="reload">${t('partial.button')}</button>${t('partial.after')}</p>`) : raw('')}
 
     <nav class="tabs" role="tablist">
-      ${tabButton('collects', 'Your data', r.kinds.length)}
-      ${tabButton('companies', 'Who gets it', r.companies.length + r.unknown.length)}
-      ${tabButton('policy', 'Policy')}
-      ${tabButton('details', 'Details')}
+      ${tabButton('collects', t('tab.collects'), r.kinds.length)}
+      ${tabButton('companies', t('tab.companies'), r.companies.length + r.unknown.length)}
+      ${tabButton('policy', t('tab.policy'))}
+      ${tabButton('details', t('tab.details'))}
     </nav>
 
     <section class="panel" id="panel-collects" role="tabpanel" ${raw(activeTab === 'collects' ? '' : 'hidden')}>
-      ${r.kinds.length ? each(r.kinds, kindRow) : raw(html`<p class="none">Nothing found yet. This page hasn’t contacted any trackers, asked for personal details or used fingerprinting features.</p>`)}
+      ${r.kinds.length ? each(r.kinds, kindRow) : raw(html`<p class="none">${t('none.kinds')}</p>`)}
     </section>
 
     <section class="panel" id="panel-companies" role="tabpanel" ${raw(activeTab === 'companies' ? '' : 'hidden')}>
       ${r.companies.length ? each(r.companies, companyRow) : raw('')}
       ${r.unknown.length ? raw(unknownBlock(r.unknown)) : raw('')}
-      ${!r.companies.length && !r.unknown.length ? raw('<p class="none">This page only talks to its own servers.</p>') : raw('')}
+      ${!r.companies.length && !r.unknown.length ? raw(html`<p class="none">${t('none.companies')}</p>`) : raw('')}
     </section>
 
     <section class="panel" id="panel-policy" role="tabpanel" ${raw(activeTab === 'policy' ? '' : 'hidden')}>
@@ -158,9 +155,9 @@ function render(data) {
 
     <footer class="foot">
       ${r.policyUrl
-        ? raw(html`<a class="policy" href="${r.policyUrl}" target="_blank" rel="noopener noreferrer">${icon('external')}Read ${r.site}’s privacy policy</a>`)
-        : raw('<span class="policy missing">No privacy policy link found on this page</span>')}
-      <p class="limits">Based on what this page did in your browser. What a site does with your data on its own servers can’t be seen from here.</p>
+        ? raw(html`<a class="policy" href="${r.policyUrl}" target="_blank" rel="noopener noreferrer">${icon('external')}${t('foot.policy', { site: r.site })}</a>`)
+        : raw(html`<span class="policy missing">${t('foot.noPolicy')}</span>`)}
+      <p class="limits">${t('foot.limits')}</p>
     </footer>
   `;
   wire();
@@ -174,7 +171,7 @@ function tabButton(id, label, count) {
 
 function kindRow(k) {
   const key = 'k:' + k.id;
-  const s = STATUS[k.status];
+  const s = statusInfo(k.status);
   return html`
     <details class="row sev-${k.severity}" data-key="${key}" ${raw(open.has(key) ? 'open' : '')}>
       <summary>
@@ -185,7 +182,7 @@ function kindRow(k) {
       </summary>
       <div class="row-body">
         <ul class="evidence">${each(k.evidence, (e) => html`<li>${e}</li>`)}</ul>
-        ${k.recipients.length ? raw(html`<div class="chips" aria-label="Companies">${each(k.recipients, (n) => html`<span class="chip">${n}</span>`)}</div>`) : raw('')}
+        ${k.recipients.length ? raw(html`<div class="chips" aria-label="${t('companies')}">${each(k.recipients, (n) => html`<span class="chip">${n}</span>`)}</div>`) : raw('')}
       </div>
     </details>`;
 }
@@ -198,19 +195,19 @@ function companyRow(c) {
     <details class="row company cat-${main}" data-key="${key}" ${raw(open.has(key) ? 'open' : '')}>
       <summary>
         <span class="avatar" aria-hidden="true">${c.name.slice(0, 1)}</span>
-        <span class="row-title">${c.name}<small>${c.categoryLabels.join(', ')}${c.selfHosted.length ? ', hidden in the site' : ''}</small></span>
-        <span class="req" title="Requests from this page">${c.requests}</span>
+        <span class="row-title">${c.name}<small>${c.categoryLabels.join(', ')}${c.selfHosted.length ? t('company.hiddenSuffix') : ''}</small></span>
+        <span class="req" title="${t('req.title')}">${c.requests} ${t('req')}</span>
         ${icon('chevron', 'icon chev')}
       </summary>
       <div class="row-body">
         <p class="about">${c.about}</p>
-        ${c.selfHosted.length ? raw(html`<p class="hidden-note">${icon('eye')}<span>${c.name}’s code is loaded from an address that isn’t ${c.name}’s own, so it looks like part of the site and is harder for ad blockers to spot.</span></p>`) : raw('')}
+        ${c.selfHosted.length ? raw(html`<p class="hidden-note">${icon('eye')}<span>${t('company.hidden', { name: c.name })}</span></p>`) : raw('')}
         <dl class="facts">
-          ${c.domains.length ? raw(html`<dt>Servers contacted</dt><dd>${c.domains.join(', ')}</dd>`) : raw('')}
-          ${c.selfHosted.length ? raw(html`<dt>Loaded from</dt><dd>${c.selfHosted.join(', ')}</dd>`) : raw('')}
-          <dt>Set cookies</dt><dd>${c.setsCookies ? 'Yes' : 'No'}</dd>
+          ${c.domains.length ? raw(html`<dt>${t('company.servers')}</dt><dd>${c.domains.join(', ')}</dd>`) : raw('')}
+          ${c.selfHosted.length ? raw(html`<dt>${t('company.loadedFrom')}</dt><dd>${c.selfHosted.join(', ')}</dd>`) : raw('')}
+          <dt>${t('company.cookies')}</dt><dd>${c.setsCookies ? t('yes') : t('no')}</dd>
         </dl>
-        <a class="report" href="${reportUrl({ domain: reportDomain, seenOn: currentSite, company: c.name })}" target="_blank" rel="noopener noreferrer">Something wrong here? Suggest a correction</a>
+        <a class="report" href="${reportUrl({ domain: reportDomain, seenOn: currentSite, company: c.name })}" target="_blank" rel="noopener noreferrer">${t('company.correct')}</a>
       </div>
     </details>`;
 }
@@ -221,13 +218,13 @@ function unknownBlock(list) {
     <details class="row unknown" data-key="${key}" ${raw(open.has(key) ? 'open' : '')}>
       <summary>
         <span class="avatar" aria-hidden="true">?</span>
-        <span class="row-title">${plural(list.length, 'other server')}<small>Not in our tracker list</small></span>
-        <span class="req">${list.reduce((s, u) => s + u.requests, 0)}</span>
+        <span class="row-title">${t('unknown.title', { n: list.length })}<small>${t('unknown.sub')}</small></span>
+        <span class="req">${list.reduce((s, u) => s + u.requests, 0)} ${t('req')}</span>
         ${icon('chevron', 'icon chev')}
       </summary>
       <div class="row-body">
-        <p class="about">Often the site’s own CDNs or services. Each one still sees your IP address. Spot a tracker? Report it and it can be added for everyone. You’ll review the form on GitHub before anything is sent.</p>
-        <ul class="hosts">${each(list, (u) => html`<li><span class="host">${u.host}<small class="muted">${u.requests} req${u.setsCookies ? ', sets a cookie' : ''}</small></span><a class="report-btn" href="${reportUrl({ domain: u.host, seenOn: currentSite })}" target="_blank" rel="noopener noreferrer" title="Suggest ${u.host} for the tracker list on GitHub" aria-label="Report ${u.host} as a tracker">Report</a></li>`)}</ul>
+        <p class="about">${t('unknown.about')}</p>
+        <ul class="hosts">${each(list, (u) => html`<li><span class="host">${u.host}<small class="muted">${u.requests} ${t('req')}${u.setsCookies ? t('unknown.setsCookie') : ''}</small></span><a class="report-btn" href="${reportUrl({ domain: u.host, seenOn: currentSite })}" target="_blank" rel="noopener noreferrer" title="${t('unknown.reportTitle', { host: u.host })}" aria-label="${t('unknown.reportAria', { host: u.host })}">${t('unknown.report')}</a></li>`)}</ul>
       </div>
     </details>`;
 }
@@ -237,20 +234,20 @@ function detailsPanel(r) {
   const stat = (n, label) => html`<div class="stat"><b>${n}</b><span>${label}</span></div>`;
   return html`
     <div class="stats">
-      ${raw(stat(r.score, 'Score out of 100'))}
-      ${raw(stat(s.requests, 'Requests made'))}
-      ${raw(stat(s.thirdPartySites, 'Other websites contacted'))}
-      ${raw(stat(s.cookieSetters, 'Servers that set cookies'))}
-      ${raw(stat(s.firstPartyCookies, `Cookies kept by ${r.site}`))}
-      ${raw(stat(s.localStorage + s.sessionStorage, 'Items in site storage'))}
+      ${raw(stat(r.score, t('stat.score')))}
+      ${raw(stat(s.requests, t('stat.requests')))}
+      ${raw(stat(s.thirdPartySites, t('stat.sites')))}
+      ${raw(stat(s.cookieSetters, t('stat.cookieSetters')))}
+      ${raw(stat(s.firstPartyCookies, t('stat.firstCookies', { site: r.site })))}
+      ${raw(stat(s.localStorage + s.sessionStorage, t('stat.storage')))}
     </div>
-    <h2>How the grade works</h2>
-    <p class="explain">Every page starts at 100. Points come off for each tracking company (session recording and fingerprinting cost the most), for unknown outside servers, for tracking cookies, and for fingerprinting or location features the page actually used.</p>
-    <h2>What “Seen”, “Likely” and “Asked” mean</h2>
+    <h2>${t('details.howTitle')}</h2>
+    <p class="explain">${t('details.how')}</p>
+    <h2>${t('details.legendTitle')}</h2>
     <ul class="legend">
-      <li><span class="status status-seen">Seen</span>We watched it happen in your browser on this page.</li>
-      <li><span class="status status-likely">Likely</span>A company on this page is known to collect it.</li>
-      <li><span class="status status-asked">Asked</span>The page has a form field for it.</li>
+      <li><span class="status status-seen">${t('status.seen')}</span>${t('legend.seen')}</li>
+      <li><span class="status status-likely">${t('status.likely')}</span>${t('legend.likely')}</li>
+      <li><span class="status status-asked">${t('status.asked')}</span>${t('legend.asked')}</li>
     </ul>
   `;
 }
@@ -356,24 +353,24 @@ async function readPolicy(url, fromThisPage) {
       text = await textFromTab(tabId);
     } else {
       const res = await fetch(url, { credentials: 'omit', redirect: 'follow' });
-      if (!res.ok) throw new Error(`The site answered with an error (${res.status}).`);
+      if (!res.ok) throw new Error(t('pol.err.http', { status: res.status }));
       const type = res.headers.get('content-type') || '';
-      if (/pdf/i.test(type)) throw new Error('This privacy policy is a PDF, which SeeYourData can’t read yet. Open it to read it yourself.');
+      if (/pdf/i.test(type)) throw new Error(t('pol.err.pdf'));
       text = /html|xml/i.test(type) || !type ? htmlToText(await res.text()) : await res.text();
       if (wordCount(text) < 300) {
         const fromTab = await textViaBackgroundTab(url).catch(() => '');
         if (wordCount(fromTab) > wordCount(text)) text = fromTab;
       }
     }
-    if (wordCount(text) < 40) throw new Error('The page came back almost empty, so there was nothing to read.');
+    if (wordCount(text) < 40) throw new Error(t('pol.err.empty'));
     text = text.slice(0, 400000);
     policy = { ...policy, status: 'done', url, text };
     chrome.storage.session.set({ [cacheKey(url)]: { text, at: Date.now() } }).catch(() => {});
   } catch (e) {
     const message = /Receiving end does not exist|Could not establish connection/i.test(e.message)
-      ? 'This page can’t be read yet. Reload it and try again.'
+      ? t('pol.err.reload')
       : /Failed to fetch|NetworkError/i.test(e.message)
-        ? 'The policy couldn’t be downloaded. Check your connection, or open the policy and use “Read this page”.'
+        ? t('pol.err.network')
         : e.message;
     policy = { ...policy, status: 'error', error: message };
   }
@@ -383,62 +380,62 @@ async function readPolicy(url, fromThisPage) {
 function policyPanel(r) {
   const onPolicyPage = r.policyUrl && stripHash(r.policyUrl) === stripHash(r.url);
   const readButtons = r.policyUrl && !onPolicyPage
-    ? html`<button type="button" class="btn primary" data-action="read-policy">Read the privacy policy</button>
-           <button type="button" class="btn link" data-action="read-page">This page is the policy? Read this page</button>`
-    : html`<button type="button" class="btn primary" data-action="read-page">${onPolicyPage ? 'Read this privacy policy' : 'Read this page as the policy'}</button>`;
+    ? html`<button type="button" class="btn primary" data-action="read-policy">${t('pol.btn.read')}</button>
+           <button type="button" class="btn link" data-action="read-page">${t('pol.btn.thisIsPolicy')}</button>`
+    : html`<button type="button" class="btn primary" data-action="read-page">${onPolicyPage ? t('pol.btn.readThisPolicy') : t('pol.btn.readAsPolicy')}</button>`;
 
   if (policy.status === 'loading') {
-    return html`<div class="pol-intro"><p class="pol-loading"><span class="spinner" aria-hidden="true"></span>Reading the privacy policy…</p></div>`;
+    return html`<div class="pol-intro"><p class="pol-loading"><span class="spinner" aria-hidden="true"></span>${t('pol.loading')}</p></div>`;
   }
   if (policy.status === 'error') {
-    return html`<div class="pol-intro">${icon('alert', 'pol-intro-icon warn')}<h2>Couldn’t read the policy</h2><p>${policy.error}</p><div class="btns">${raw(readButtons)}</div></div>`;
+    return html`<div class="pol-intro">${icon('alert', 'pol-intro-icon warn')}<h2>${t('pol.errTitle')}</h2><p>${policy.error}</p><div class="btns">${raw(readButtons)}</div></div>`;
   }
   if (policy.status !== 'done') {
     return html`<div class="pol-intro">
       ${icon('doc', 'pol-intro-icon')}
-      <h2>What does ${r.site}’s privacy policy say?</h2>
+      <h2>${t('pol.introTitle', { site: r.site })}</h2>
       ${r.policyUrl || onPolicyPage
-        ? raw(html`<p>SeeYourData will download the policy and read it on your computer. You’ll see what it says about your data, and anything this page does that the policy leaves out. Nothing is sent anywhere else.</p>`)
-        : raw(html`<p>There’s no privacy policy link on this page. Open the site’s privacy policy (often linked at the bottom of the home page), then come back here.</p>`)}
+        ? raw(html`<p>${t('pol.intro')}</p>`)
+        : raw(html`<p>${t('pol.noLink')}</p>`)}
       <div class="btns">${raw(readButtons)}</div>
     </div>`;
   }
 
   const a = analyzePolicy(policy.text, { companies: r.companies, kinds: r.kinds });
-  const meta = [`About ${a.minutes} minute${a.minutes === 1 ? '' : 's'} to read.`, a.updated ? `Last updated ${a.updated}.` : 'No date of last update found.'];
+  const meta = [t('pol.minutes', { n: a.minutes }), a.updated ? t('pol.updated', { date: a.updated }) : t('pol.noDate')];
 
   return html`
     <section class="pol-summary rating-${a.rating}">
       <div class="pol-score" aria-label="${a.covered} of ${a.total}"><b>${a.covered}</b><span>/${a.total}</span></div>
       <div class="pol-summary-text">
-        <h2>Covers ${a.covered} of ${a.total} things GDPR says a privacy notice must tell you</h2>
+        <h2>${t('pol.covers', { n: a.covered, total: a.total })}</h2>
         <p>${meta.join(' ')}</p>
-        <a href="${policy.url}" target="_blank" rel="noopener noreferrer">${icon('external')}Open the policy</a>
+        <a href="${policy.url}" target="_blank" rel="noopener noreferrer">${icon('external')}${t('pol.open')}</a>
       </div>
     </section>
 
-    ${a.tooShort || !a.looksLikePolicy ? raw(html`<p class="notice">This doesn’t look like a full privacy policy, so the results may be incomplete. If the real policy is on another page, open it and use “Read this page”.</p>`) : raw('')}
+    ${a.tooShort || !a.looksLikePolicy ? raw(html`<p class="notice">${t('pol.notFull')}</p>`) : raw('')}
 
     ${a.gaps.length ? raw(html`<section class="pol-gaps">
-      <h3>${icon('alert')}On this page, but not in the policy</h3>
+      <h3>${icon('alert')}${t('pol.gapsTitle')}</h3>
       <ul>${each(a.gaps, (g) => html`<li>${g.text}</li>`)}</ul>
-      <p class="fine">The policy might still cover these with general wording such as “our partners”.</p>
-      <button type="button" class="btn primary email-btn" data-action="email-site">${icon('mail')}Email ${r.site} about this</button>
+      <p class="fine">${t('pol.gapsFine')}</p>
+      <button type="button" class="btn primary email-btn" data-action="email-site">${icon('mail')}${t('pol.email', { site: r.site })}</button>
     </section>`) : raw('')}
 
-    ${raw(policyGroup('What they say they collect', 'pd', a.data))}
-    ${raw(policyGroup('Why they use it', 'pp', a.purposes))}
-    ${raw(policyGroup('Legal reasons they give', 'pb', a.bases))}
-    ${raw(policyGroup('Your rights they explain', 'pr', a.rights))}
-    ${raw(policyGroup('What a GDPR notice must include', 'pc', a.checklist.map((c) => ({ ...c, label: c.optional ? c.label + ' (not always required)' : c.label }))))}
+    ${raw(policyGroup(t('pol.h.data'), 'pd', a.data))}
+    ${raw(policyGroup(t('pol.h.purposes'), 'pp', a.purposes))}
+    ${raw(policyGroup(t('pol.h.bases'), 'pb', a.bases))}
+    ${raw(policyGroup(t('pol.h.rights'), 'pr', a.rights))}
+    ${raw(policyGroup(t('pol.h.checklist'), 'pc', a.checklist.map((c) => ({ ...c, label: c.optional ? c.label + t('pol.notRequired') : c.label }))))}
 
-    <h3 class="pol-h">Companies the policy names</h3>
+    <h3 class="pol-h">${t('pol.h.named')}</h3>
     ${a.named.length
       ? raw(html`<div class="chips">${each(a.named, (n) => html`<span class="chip">${n}</span>`)}</div>`)
-      : raw('<p class="fine">It doesn’t name any of the tracking companies SeeYourData knows.</p>')}
+      : raw(html`<p class="fine">${t('pol.noneNamed')}</p>`)}
 
-    <p class="limits">Read automatically by looking for key words in English, German and Turkish. It can miss or misread things, and it isn’t legal advice. Tap a line to see the sentence it’s based on.</p>
-    <button type="button" class="btn link" data-action="policy-reset">Read a different page</button>
+    <p class="limits">${t('pol.limits')}</p>
+    <button type="button" class="btn link" data-action="policy-reset">${t('pol.readOther')}</button>
   `;
 }
 
@@ -460,7 +457,7 @@ function policyItem(prefix, it) {
   const key = prefix + ':' + it.id;
   const state = it.found ? (it.warn || it.sensitive ? 'warn' : 'yes') : it.denied ? 'denied' : 'no';
   const mark = state === 'no' ? icon('dash') : state === 'warn' ? icon('alert') : icon('check');
-  const note = state === 'no' ? 'Not mentioned' : state === 'denied' ? 'Says it doesn’t' : '';
+  const note = state === 'no' ? t('pol.notMentioned') : state === 'denied' ? t('pol.denied') : '';
   if (!it.quote) {
     return html`<div class="pi pi-${state}"><span class="pi-mark">${mark}</span><span class="pi-label">${it.label}</span>${note ? raw(html`<span class="pi-note">${note}</span>`) : ''}</div>`;
   }
@@ -476,7 +473,38 @@ function stripHash(u) {
 
 const hostOf = (u) => { try { return new URL(u).hostname.replace(/^www\./, ''); } catch { return u; } };
 
+// ---- Language ------------------------------------------------------------------
+const langSelect = document.getElementById('lang-switch');
+
+function applyStaticText() {
+  document.documentElement.lang = getLang();
+  live.textContent = t('live');
+  live.title = t('liveTitle');
+  langSelect.setAttribute('aria-label', t('language'));
+  langSelect.title = t('language');
+  const loading = app.querySelector('.loading');
+  if (loading) loading.textContent = t('loading');
+}
+
+async function initLanguage() {
+  let saved;
+  try { saved = (await chrome.storage.local.get('uiLang')).uiLang; } catch { /* no storage */ }
+  setLang(saved || detectLang(chrome.i18n?.getUILanguage?.() || navigator.language));
+  langSelect.innerHTML = Object.entries(LANG_NAMES)
+    .map(([code, name]) => `<option value="${code}" ${code === getLang() ? 'selected' : ''}>${name}</option>`)
+    .join('');
+  applyStaticText();
+  langSelect.addEventListener('change', async () => {
+    setLang(langSelect.value);
+    try { await chrome.storage.local.set({ uiLang: langSelect.value }); } catch { /* ignore */ }
+    applyStaticText();
+    lastJson = '';
+    refresh();
+  });
+}
+
 // ---- Start -------------------------------------------------------------------
+await initLanguage();
 await resolveTab();
 await refresh();
 setInterval(refresh, 1500);

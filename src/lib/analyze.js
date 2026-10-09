@@ -3,6 +3,9 @@
 
 import { CATEGORIES, lookupTracker, scriptPatternById } from './trackers.js';
 import { getSite } from './domain.js';
+import { t, joinList } from './i18n.js';
+
+export { joinList };
 
 /** The kinds of personal data we report on, in the user's words. */
 export const DATA_KINDS = {
@@ -113,8 +116,8 @@ export function analyze(raw) {
       ...c,
       data: [...c.data],
       weight: Math.max(...c.categories.map((k) => CATEGORIES[k].weight)),
-      categoryLabels: c.categories.map((k) => CATEGORIES[k].label),
-      about: CATEGORIES[mainCategory(c.categories)].about
+      categoryLabels: c.categories.map((k) => t(`cat.${k}`)),
+      about: t(`cat.${mainCategory(c.categories)}.about`)
     }))
     .sort((a, b) => b.weight - a.weight || b.requests - a.requests);
   unknown.sort((a, b) => b.requests - a.requests);
@@ -126,7 +129,7 @@ export function analyze(raw) {
   // ---- Data kinds
   const kinds = {};
   const kind = (id) =>
-    (kinds[id] ||= { id, ...DATA_KINDS[id], evidence: [], recipients: new Set(), confirmed: false, severity: 1 });
+    (kinds[id] ||= { id, ...DATA_KINDS[id], title: t(`kind.${id}`), evidence: [], recipients: new Set(), confirmed: false, severity: 1 });
 
   for (const c of companyList) {
     for (const d of c.data) {
@@ -141,7 +144,8 @@ export function analyze(raw) {
     const k = kind(meta.kind);
     k.confirmed = true;
     const who = describeSources(info.sources || [], site);
-    k.evidence.push(who ? `${meta.label}, by ${who}` : meta.label);
+    const label = t(`api.${api}`);
+    k.evidence.push(who ? t('apiBy', { label, who }) : label);
     for (const s of info.sources || []) {
       const t = lookupTracker(s);
       if (t) k.recipients.add(t.company);
@@ -151,7 +155,7 @@ export function analyze(raw) {
   if (cookieSetters.length) {
     const k = kind('identifiers');
     k.confirmed = true;
-    k.evidence.push(`${plural(cookieSetters.length, 'outside server')} stored a tracking cookie`);
+    k.evidence.push(t('cookieSetters', { n: cookieSetters.length }));
   }
 
   // Contact, payment and identity fields
@@ -160,21 +164,19 @@ export function analyze(raw) {
   if (contactFields.length || fields.password) {
     const k = kind('contact');
     k.asked = true;
-    const list = [...contactFields, ...(fields.password ? ['password'] : [])].map((f) => FIELD_LABELS[f]);
-    k.evidence.push(`This page has a form asking for your ${joinList(list)}`);
+    const list = [...contactFields, ...(fields.password ? ['password'] : [])].map((f) => t(`field.${f}`));
+    k.evidence.push(t('form.contact', { list: joinList(list) }));
   }
   if (fields.card) {
     const k = kind('payment');
     k.asked = true;
-    k.evidence.push('This page has a form asking for your card number');
+    k.evidence.push(t('form.card'));
   }
 
   if (thirdPartySites.size) {
     const k = kind('ip');
     k.confirmed = true;
-    k.evidence.push(
-      `Your browser contacted ${plural(thirdPartySites.size, 'other website')}. Each one sees your IP address, which reveals your approximate location and internet provider.`
-    );
+    k.evidence.push(t('ipEvidence', { n: thirdPartySites.size }));
   }
 
   // Severity and plain-language evidence for inferred kinds
@@ -184,7 +186,7 @@ export function analyze(raw) {
     if (!k.evidence.length && recipients.length) {
       k.evidence.push(inferredEvidence(k.id, recipients));
     } else if (recipients.length && k.id !== 'ip') {
-      k.evidence.push(`Likely shared with ${joinList(recipients.slice(0, 4))}${recipients.length > 4 ? ` and ${recipients.length - 4} more` : ''}`);
+      k.evidence.push(t('likelyShared', { names: namesList(recipients) }));
     }
     const status = k.confirmed ? 'seen' : k.asked ? 'asked' : 'likely';
     return { id: k.id, title: k.title, icon: k.icon, status, severity: SEVERITY[k.id] || 1, evidence: k.evidence, recipients };
@@ -216,7 +218,7 @@ export function analyze(raw) {
     score,
     grade: g.grade,
     level: g.level,
-    levelLabel: g.label,
+    levelLabel: t(`level.${g.grade}`),
     headline: headline(trackingCompanies.length, thirdPartySites.size, kindList),
     kinds: kindList,
     companies: companyList,
@@ -242,28 +244,25 @@ export function analyze(raw) {
 }
 
 function headline(tracking, sites, kinds) {
-  if (!sites && !kinds.length) return 'This page hasn’t sent your data anywhere else that we can see.';
-  if (!tracking) return `This page loads content from ${plural(sites, 'other website')}, but none we know as trackers.`;
-  return `${plural(tracking, 'tracking company', 'tracking companies')} can see your visit to this page.`;
+  if (!sites && !kinds.length) return t('headline.none');
+  if (!tracking) return t('headline.noTracking', { n: sites });
+  return t('headline.tracking', { n: tracking });
 }
 
+function namesList(recipients) {
+  return joinList(recipients.slice(0, 4)) + (recipients.length > 4 ? t('more', { n: recipients.length - 4 }) : '');
+}
+
+const INFERRED = new Set(['interactions', 'browsing', 'identifiers', 'device', 'contact', 'payment']);
 function inferredEvidence(id, recipients) {
-  const names = joinList(recipients.slice(0, 4)) + (recipients.length > 4 ? ` and ${recipients.length - 4} more` : '');
-  switch (id) {
-    case 'interactions': return `${names} ${recipients.length > 1 ? 'record' : 'records'} sessions on this site, which can capture mouse movement, clicks and text you type`;
-    case 'browsing': return `The pages you view here are sent to ${names}`;
-    case 'identifiers': return `${names} ${recipients.length > 1 ? 'use' : 'uses'} cookies or IDs to recognise you on other websites`;
-    case 'device': return `${names} ${recipients.length > 1 ? 'collect' : 'collects'} details about your browser and device`;
-    case 'contact': return `${names} can link this visit to your email or name once you share them`;
-    case 'payment': return `${names} will receive your payment details if you buy something`;
-    default: return `Shared with ${names}`;
-  }
+  const vars = { names: namesList(recipients), many: recipients.length > 1 };
+  return t(INFERRED.has(id) ? `inferred.${id}` : 'inferred.other', vars);
 }
 
 function describeSources(sources, site) {
   const names = new Set();
   for (const s of sources) {
-    if (!s || getSite(s) === site) names.add('this site');
+    if (!s || getSite(s) === site) names.add(t('thisSite'));
     else names.add(lookupTracker(s)?.company || s);
   }
   return joinList([...names]);
@@ -281,7 +280,3 @@ export function plural(n, one, many = one + 's') {
   return `${n} ${n === 1 ? one : many}`;
 }
 
-export function joinList(items) {
-  if (items.length <= 1) return items.join('');
-  return `${items.slice(0, -1).join(', ')} and ${items[items.length - 1]}`;
-}

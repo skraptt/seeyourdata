@@ -1,86 +1,102 @@
 // The email draft page. Opened in a new tab from the popup's Policy tab.
 // It only prepares text: sending always happens in the person's own email app.
+//
+// Two languages are in play here: the page itself follows the language chosen
+// in the popup, while the email starts in the language of the site's privacy
+// policy (and can be switched separately).
 
 import { buildEmail, mailtoUrl, gmailUrl, LANGUAGES } from '../src/lib/complaint.js';
+import { t, setLang, getLang, detectLang, joinList } from '../src/lib/i18n.js';
 
 const app = document.getElementById('app');
 const id = new URLSearchParams(location.search).get('id');
 
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const MAILTO_SAFE_LENGTH = 1800; // some email apps cut longer mailto links
+const NAME_PLACEHOLDER = { en: '[Your name]', de: '[Ihr Name]', tr: '[Adınız]' };
 
 let evidence = null;
-let lang = 'en';
+let emailLang = 'en';
 let accessRequest = false;
 let edited = false;
 
 async function start() {
+  let saved;
+  try { saved = (await chrome.storage.local.get('uiLang')).uiLang; } catch { /* no storage */ }
+  setLang(saved || detectLang(chrome.i18n?.getUILanguage?.() || navigator.language));
+  document.documentElement.lang = getLang();
+  app.innerHTML = `<p class="loading">${esc(t('c.preparing'))}</p>`;
+
   try {
     evidence = (await chrome.storage.session.get('draft:' + id))['draft:' + id];
   } catch { /* storage unavailable */ }
   if (!evidence) {
-    app.innerHTML = `<section class="empty"><h1>This draft has expired</h1><p>Open SeeYourData on the website again, go to the Policy tab and click “Email the website about this”.</p></section>`;
+    app.innerHTML = `<section class="empty"><h1>${esc(t('c.expired.title'))}</h1><p>${esc(t('c.expired.text'))}</p></section>`;
     return;
   }
-  lang = evidence.language || 'en';
-  document.title = `Email ${evidence.site} – SeeYourData`;
+  emailLang = evidence.language || 'en';
+  document.title = t('c.docTitle', { site: evidence.site });
   render();
 }
 
 function render() {
-  const mail = buildEmail(evidence, { lang, accessRequest });
+  const mail = buildEmail(evidence, { lang: emailLang, accessRequest });
   const companies = evidence.items.filter((i) => i.kind === 'company').length;
   const behaviours = evidence.items.length - companies;
-  const summary = [
-    companies ? `${companies} compan${companies === 1 ? 'y' : 'ies'} the policy doesn’t name` : '',
-    behaviours ? `${behaviours} kind${behaviours === 1 ? '' : 's'} of data collection it doesn’t mention` : ''
-  ].filter(Boolean).join(' and ');
+  const summary = joinList([
+    companies ? t('c.sum.companies', { n: companies }) : '',
+    behaviours ? t('c.sum.behaviours', { n: behaviours }) : ''
+  ].filter(Boolean));
 
   app.innerHTML = `
     <section class="c-head">
-      <h1>Email ${esc(evidence.site)} about its privacy policy</h1>
-      <p>We found ${esc(summary)}. This draft lists the evidence and asks them to explain. Check it, change anything you like, then send it from your own email.</p>
+      <h1>${esc(t('c.h1', { site: evidence.site }))}</h1>
+      <p>${esc(capitalise(t('c.found', { summary })))}</p>
     </section>
 
     <section class="c-card">
       <div class="c-row">
-        <label for="to">To</label>
+        <label for="to">${esc(t('c.to'))}</label>
         <input id="to" type="email" value="${esc(mail.to)}" placeholder="privacy@${esc(evidence.site)}" autocomplete="off" spellcheck="false">
       </div>
-      ${mail.to ? '' : `<p class="c-hint warn">We couldn’t find a privacy contact address in the policy. Look for one on the site’s contact or imprint page${lang === 'de' ? ' (Impressum)' : ''}.</p>`}
+      ${mail.to ? '' : `<p class="c-hint warn">${esc(t('c.noContact'))}</p>`}
       <div class="c-row">
-        <label for="subject">Subject</label>
+        <label for="subject">${esc(t('c.subject'))}</label>
         <input id="subject" type="text" value="${esc(mail.subject)}">
       </div>
       <div class="c-options">
-        <label class="c-select">Language
-          <select id="lang">${Object.entries(LANGUAGES).map(([k, v]) => `<option value="${k}" ${k === lang ? 'selected' : ''}>${v}</option>`).join('')}</select>
+        <label class="c-select">${esc(t('c.emailLanguage'))}
+          <select id="lang">${Object.entries(LANGUAGES).map(([k, v]) => `<option value="${k}" ${k === emailLang ? 'selected' : ''}>${v}</option>`).join('')}</select>
         </label>
-        <label class="c-check"><input id="access" type="checkbox" ${accessRequest ? 'checked' : ''}> Also ask for a copy of the data they hold about me (GDPR Art. 15)</label>
+        <label class="c-check"><input id="access" type="checkbox" ${accessRequest ? 'checked' : ''}> ${esc(t('c.access'))}</label>
       </div>
-      <textarea id="body" rows="22" spellcheck="true" aria-label="Email text">${esc(mail.body)}</textarea>
-      <p class="c-hint">Replace <b>${lang === 'de' ? '[Ihr Name]' : lang === 'tr' ? '[Adınız]' : '[Your name]'}</b> at the end with your name.</p>
+      <textarea id="body" rows="22" spellcheck="true" lang="${emailLang}" aria-label="${esc(t('c.bodyAria'))}">${esc(mail.body)}</textarea>
+      <p class="c-hint">${esc(t('c.replaceName', { ph: NAME_PLACEHOLDER[emailLang] || NAME_PLACEHOLDER.en }))}</p>
     </section>
 
     <section class="c-actions">
-      <button type="button" class="btn primary" id="open-mail">Open in my email app</button>
-      <button type="button" class="btn" id="open-gmail">Open in Gmail</button>
-      <button type="button" class="btn" id="copy">Copy email text</button>
+      <button type="button" class="btn primary" id="open-mail">${esc(t('c.openMail'))}</button>
+      <button type="button" class="btn" id="open-gmail">${esc(t('c.openGmail'))}</button>
+      <button type="button" class="btn" id="copy">${esc(t('c.copy'))}</button>
       <span class="c-status" id="status" role="status" aria-live="polite"></span>
     </section>
-    <p class="c-hint" id="length-hint" hidden>This email is long, so some email apps may cut it off. If that happens, use “Copy email text” and paste it into a new email.</p>
+    <p class="c-hint" id="length-hint" hidden>${esc(t('c.long'))}</p>
 
     <section class="c-note">
-      <h2>Before you send</h2>
+      <h2>${esc(t('c.beforeTitle'))}</h2>
       <ul>
-        <li>SeeYourData doesn’t send anything. The email goes from your own account, so the website will see your name and email address.</li>
-        <li>The evidence comes from your browser on this one visit. Sites can change, so keep a screenshot of the SeeYourData popup if you want a record.</li>
-        <li>If you ask for a copy of your data, the GDPR gives them one month to answer (Art. 12). If they don’t reply, or you’re not satisfied with the answer, you can complain to your data protection authority.</li>
+        <li>${esc(t('c.before1'))}</li>
+        <li>${esc(t('c.before2'))}</li>
+        <li>${esc(t('c.before3'))}</li>
       </ul>
     </section>
   `;
   wire();
   updateLengthHint();
+}
+
+function capitalise(text) {
+  return text.charAt(0).toLocaleUpperCase(getLang()) + text.slice(1);
 }
 
 function current() {
@@ -92,12 +108,11 @@ function current() {
 }
 
 function updateLengthHint() {
-  const m = current();
-  document.getElementById('length-hint').hidden = mailtoUrl(m).length <= MAILTO_SAFE_LENGTH;
+  document.getElementById('length-hint').hidden = mailtoUrl(current()).length <= MAILTO_SAFE_LENGTH;
 }
 
 function rebuild(change) {
-  if (edited && !confirm('Start a new draft? Your changes to the text will be replaced.')) {
+  if (edited && !confirm(t('c.confirmRebuild'))) {
     render(); // put the controls back the way they were
     return;
   }
@@ -117,11 +132,11 @@ function wire() {
     document.getElementById(fieldId).addEventListener('input', () => { edited = true; updateLengthHint(); });
   }
   document.getElementById('to').addEventListener('input', updateLengthHint);
-  document.getElementById('lang').addEventListener('change', (e) => rebuild(() => { lang = e.target.value; }));
+  document.getElementById('lang').addEventListener('change', (e) => rebuild(() => { emailLang = e.target.value; }));
   document.getElementById('access').addEventListener('change', (e) => rebuild(() => { accessRequest = e.target.checked; }));
   document.getElementById('open-mail').addEventListener('click', () => {
     location.href = mailtoUrl(current());
-    status('Opening your email app…');
+    status(t('c.opening'));
   });
   document.getElementById('open-gmail').addEventListener('click', () => {
     window.open(gmailUrl(current()), '_blank', 'noopener');
@@ -131,9 +146,9 @@ function wire() {
     const text = `${m.to ? `To: ${m.to}\n` : ''}Subject: ${m.subject}\n\n${m.body}`;
     try {
       await navigator.clipboard.writeText(text);
-      status('Copied');
+      status(t('c.copied'));
     } catch {
-      status('Couldn’t copy. Select the text and copy it yourself.');
+      status(t('c.copyFail'));
     }
   });
 }

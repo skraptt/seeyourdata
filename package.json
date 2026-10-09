@@ -1,13 +1,13 @@
 {
   "name": "seeyourdata",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "Chrome extension that shows which personal data the website you're on can collect, and which companies receive it.",
   "private": true,
   "type": "module",
   "license": "MIT",
   "scripts": {
     "test": "node --test test/*.test.js",
-    "package": "rm -f seeyourdata.zip && zip -r seeyourdata.zip manifest.json src popup icons LICENSE -x '*.DS_Store'",
+    "package": "rm -f seeyourdata.zip && zip -r seeyourdata.zip manifest.json _locales src popup icons LICENSE -x '*.DS_Store'",
     "crawl": "python3 tools/crawl.py",
     "rank": "node tools/rank.js"
   },

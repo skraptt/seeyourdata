@@ -42,6 +42,17 @@ Issues labelled `tracker-list` come from the popup. Check the domain the same wa
 
 `src/lib/policy.js` finds things by wording. When it misses something in a real policy, add the phrase to the matching rule and add the sentence to a test in `test/policy.test.js`. Adding a new language means adding its wording to every rule and a sample policy in `test/fixtures/`. Keep patterns specific enough that ordinary text doesn't match.
 
+## Translating SeeYourData
+
+All interface text lives in `src/lib/i18n.js`. To fix a translation, edit it there. To add a language:
+
+1. Copy the `en` block in `MESSAGES`, give it the language code (for example `fr`), and translate every message. Some messages are small functions so plurals and word order can be right; keep their variables.
+2. Add the code and the language's own name to `LANG_NAMES`.
+3. Add `_locales/<code>/messages.json` with the extension's name and description.
+4. Run `npm test`. It fails if any message is missing or renders as "undefined".
+
+The privacy-policy reader (`policy.js`) and the email drafts (`complaint.js`) have their own wording per language; adding a language there is a separate, bigger step.
+
 ## Changing detection or the popup
 
 - Keep `src/lib/analyze.js` free of browser APIs so it stays unit-testable. Add a test in `test/analyze.test.js` for new behaviour.

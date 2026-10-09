@@ -1,0 +1,11 @@
+{
+  "appName": {
+    "message": "SeeYourData"
+  },
+  "appDesc": {
+    "message": "See which personal data the website you're on can collect, and which companies receive it."
+  },
+  "actionTitle": {
+    "message": "SeeYourData: what this site collects"
+  }
+}

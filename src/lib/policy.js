@@ -7,7 +7,8 @@
 // To improve it: add wording to the patterns below and a test case in
 // test/policy.test.js with a real sentence from a real policy.
 
-import { TRACKERS, CATEGORIES } from './trackers.js';
+import { TRACKERS } from './trackers.js';
+import { t } from './i18n.js';
 
 // ---- What data the policy says it collects -------------------------------------
 // `kind` links a finding to the data kinds the popup shows from page behaviour.
@@ -66,8 +67,8 @@ export const RIGHT_RULES = [
   { id: 'restrict', label: 'Limit how it’s used', re: /restrict(?:ion of)?(?:\/object to)? (?:the )?processing|einschränkung der verarbeitung|kısıtlan/iu },
   { id: 'portability', label: 'Take it elsewhere', re: /portabilit|transmit(?:ting)? it to another|übertragbarkeit|taşınabilir/iu },
   { id: 'object', label: 'Object to its use', re: /right to object|object to (?:the |our )?processing|\/object to|widerspruch|itiraz/iu },
-  { id: 'withdraw', label: 'Withdraw consent', re: /withdraw (?:your )?consent|revoke (?:your )?consent|consent to and\/or deactivate|widerruf|rızanızı geri/iu },
-  { id: 'complain', label: 'Complain to a data protection authority', re: /supervisory authority|data protection authority|lodge a complaint|aufsichtsbehörde|beschwerderecht|kişisel verileri koruma kurul|kurula şikayet/iu }
+  { id: 'withdraw', label: t('pol.check.withdraw'), re: /withdraw (?:your )?consent|revoke (?:your )?consent|consent to and\/or deactivate|widerruf|rızanızı geri/iu },
+  { id: 'complain', label: t('pol.check.complain'), re: /supervisory authority|data protection authority|lodge a complaint|aufsichtsbehörde|beschwerderecht|kişisel verileri koruma kurul|kurula şikayet/iu }
 ];
 
 // ---- What GDPR Art. 13 says a privacy notice must tell you -------------------------
@@ -180,26 +181,26 @@ export function companiesNamed(text) {
 export function analyzePolicy(text, observed = {}) {
   const sents = sentences(text);
   const words = String(text || '').split(/\s+/).filter(Boolean).length;
-  const run = (rules) => rules.map((r) => ({ id: r.id, label: r.label, kind: r.kind, warn: r.warn, sensitive: r.sensitive, ...firstMatch(sents, r.re, { negatable: r.negatable }) }));
+  const run = (rules, group) => rules.map((r) => ({ id: r.id, label: t(`pol.${group}.${r.id}`), kind: r.kind, warn: r.warn, sensitive: r.sensitive, ...firstMatch(sents, r.re, { negatable: r.negatable }) }));
 
-  const data = run(DATA_RULES);
-  const purposes = run(PURPOSE_RULES);
-  const bases = run(BASIS_RULES);
-  const rights = run(RIGHT_RULES);
+  const data = run(DATA_RULES, 'data');
+  const purposes = run(PURPOSE_RULES, 'purpose');
+  const bases = run(BASIS_RULES, 'basis');
+  const rights = run(RIGHT_RULES, 'right');
 
   const has = (re) => firstMatch(sents, re);
   const rightsFound = rights.filter((r) => r.found).length;
   const checklist = [
-    { id: 'controller', label: 'Who is responsible for your data', ...has(CONTROLLER) },
-    { id: 'purposes', label: 'Why your data is used', found: purposes.some((p) => p.found) },
-    { id: 'bases', label: 'The legal reason for each use', found: bases.some((b) => b.found) },
-    { id: 'recipients', label: 'Who else receives your data', ...has(RECIPIENTS) },
-    { id: 'transfers', label: 'Whether data leaves the EU, and how it’s protected', ...has(TRANSFERS) },
-    { id: 'retention', label: 'How long data is kept', ...has(RETENTION) },
-    { id: 'rights', label: 'Your rights (at least access, deletion and objection)', found: ['access', 'erase', 'object'].every((id) => rights.find((r) => r.id === id).found) },
+    { id: 'controller', label: t('pol.check.controller'), ...has(CONTROLLER) },
+    { id: 'purposes', label: t('pol.check.purposes'), found: purposes.some((p) => p.found) },
+    { id: 'bases', label: t('pol.check.bases'), found: bases.some((b) => b.found) },
+    { id: 'recipients', label: t('pol.check.recipients'), ...has(RECIPIENTS) },
+    { id: 'transfers', label: t('pol.check.transfers'), ...has(TRANSFERS) },
+    { id: 'retention', label: t('pol.check.retention'), ...has(RETENTION) },
+    { id: 'rights', label: t('pol.check.rights'), found: ['access', 'erase', 'object'].every((id) => rights.find((r) => r.id === id).found) },
     { id: 'withdraw', label: 'That you can withdraw consent', found: rights.find((r) => r.id === 'withdraw').found },
     { id: 'complain', label: 'That you can complain to a regulator', found: rights.find((r) => r.id === 'complain').found },
-    { id: 'dpo', label: 'How to reach a data protection officer', optional: true, ...has(DPO) }
+    { id: 'dpo', label: t('pol.check.dpo'), optional: true, ...has(DPO) }
   ];
   const required = checklist.filter((c) => !c.optional);
   const covered = required.filter((c) => c.found).length;
@@ -211,19 +212,14 @@ export function analyzePolicy(text, observed = {}) {
   for (const c of observed.companies || []) {
     if (!c.categories?.some((k) => TRACKING_CATEGORIES.has(k))) continue;
     if (!named.includes(c.name)) {
-      const label = c.categories.map((k) => CATEGORIES[k]?.label).filter(Boolean)[0] || '';
-      gaps.push({ type: 'company', name: c.name, text: `${c.name} is on this page${label ? ` for ${label.toLowerCase()}` : ''}, but the policy doesn’t name it.` });
+      const label = c.categories[0] ? t(`cat.${c.categories[0]}`) : '';
+      gaps.push({ type: 'company', name: c.name, text: t('gap.company', { name: c.name, label }) });
     }
   }
   const seenKinds = new Set((observed.kinds || []).filter((k) => k.status === 'seen' || k.id === 'interactions').map((k) => k.id));
   const dataById = Object.fromEntries(data.map((d) => [d.id, d]));
-  const KIND_GAPS = {
-    interactions: 'This page uses session recording, but the policy doesn’t mention recording clicks, mouse movements or typing.',
-    device: 'This page read details to fingerprint your device, but the policy doesn’t mention device or browser details.',
-    location: 'This page asked for your location, but the policy doesn’t mention location data.'
-  };
-  for (const [kind, msg] of Object.entries(KIND_GAPS)) {
-    if (seenKinds.has(kind) && !dataById[kind]?.found) gaps.push({ type: 'data', name: kind, text: msg });
+  for (const kind of ['interactions', 'device', 'location']) {
+    if (seenKinds.has(kind) && !dataById[kind]?.found) gaps.push({ type: 'data', name: kind, text: t(`gap.${kind}`) });
   }
 
   return {

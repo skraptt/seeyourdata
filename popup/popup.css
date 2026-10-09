@@ -299,7 +299,6 @@ button, summary { font: inherit; color: inherit; }
 .cat-advertising .avatar, .cat-session-replay .avatar, .cat-fingerprinting .avatar { background: var(--high-tint); color: var(--high); }
 .cat-social .avatar, .cat-analytics .avatar, .cat-customer .avatar, .cat-bot-protection .avatar { background: var(--moderate-tint); color: var(--moderate); }
 .req { font-size: 11.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
-.req::after { content: " req"; }
 .about { margin: 0 0 8px; }
 .hidden-note {
   display: flex;
@@ -508,3 +507,20 @@ button, summary { font: inherit; color: inherit; }
 .panel .notice { margin: 8px 0 0; }
 .email-btn { display: inline-flex; align-items: center; gap: 7px; margin-top: 10px; }
 .email-btn .icon { width: 16px; height: 16px; }
+
+/* Language switch */
+.lang-switch {
+  font: inherit;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--muted);
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  padding: 2px 4px;
+  cursor: pointer;
+  max-width: 110px;
+}
+.lang-switch:hover { color: var(--ink); border-color: var(--muted); }
+.live + .lang-switch { margin-left: 8px; }
+.live[hidden] + .lang-switch { margin-left: auto; }

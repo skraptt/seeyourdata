@@ -8,6 +8,13 @@
 import { getHost, getSite, isWebUrl } from './lib/domain.js';
 import { analyze } from './lib/analyze.js';
 import { lookupTracker, matchScriptPattern } from './lib/trackers.js';
+import { t, setLang, detectLang } from './lib/i18n.js';
+
+// Follow the language chosen in the popup (used for the toolbar tooltip).
+chrome.storage.local.get('uiLang').then(({ uiLang }) => setLang(uiLang || detectLang(chrome.i18n.getUILanguage()))).catch(() => {});
+chrome.storage.onChanged.addListener((changes, area) => {
+  if (area === 'local' && changes.uiLang) setLang(changes.uiLang.newValue);
+});
 
 const MAX_HOSTS = 400;
 const tabs = new Map(); // tabId -> state (in-memory cache)
@@ -177,5 +184,5 @@ function updateBadge(tabId, state) {
   chrome.action.setBadgeText({ tabId, text: n ? String(n) : '' }).catch(() => {});
   chrome.action.setBadgeBackgroundColor({ tabId, color: BADGE_COLORS[report.level] }).catch(() => {});
   chrome.action.setBadgeTextColor?.({ tabId, color: '#FFFFFF' })?.catch?.(() => {});
-  chrome.action.setTitle({ tabId, title: `SeeYourData: ${report.levelLabel.toLowerCase()} (${report.grade}) on ${report.site}` }).catch(() => {});
+  chrome.action.setTitle({ tabId, title: t('badgeTitle', { level: report.levelLabel, grade: report.grade, site: report.site }) }).catch(() => {});
 }

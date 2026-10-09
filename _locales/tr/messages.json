@@ -1,0 +1,11 @@
+{
+  "appName": {
+    "message": "SeeYourData"
+  },
+  "appDesc": {
+    "message": "Bulunduğunuz sitenin hangi kişisel verilerinizi toplayabildiğini ve bunları hangi şirketlerin aldığını görün."
+  },
+  "actionTitle": {
+    "message": "SeeYourData: bu site neler topluyor"
+  }
+}
