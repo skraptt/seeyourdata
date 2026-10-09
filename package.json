@@ -7,7 +7,7 @@
   "license": "MIT",
   "scripts": {
     "test": "node --test test/*.test.js",
-    "package": "rm -f seeyourdata.zip && zip -r seeyourdata.zip manifest.json _locales src popup icons LICENSE -x '*.DS_Store'",
+    "package": "rm -f seeyourdata-store.zip && zip -r seeyourdata-store.zip manifest.json _locales src popup icons LICENSE -x '*.DS_Store'",
     "crawl": "python3 tools/crawl.py",
     "rank": "node tools/rank.js"
   },

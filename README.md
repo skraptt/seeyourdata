@@ -105,7 +105,7 @@ test/
 ```sh
 npm test                    # unit tests, Node 18+
 python test/e2e.py shots/   # end-to-end, needs: pip install playwright && playwright install chromium
-npm run package             # builds seeyourdata.zip for the Chrome Web Store
+npm run package             # builds seeyourdata-store.zip for the Chrome Web Store (see store/LISTING.md)
 ```
 
 ## Growing the tracker list
