@@ -1,6 +1,6 @@
 // Project settings. Change REPO to your GitHub "owner/name" after forking,
 // so the popup's report links open issues in your repository.
-export const REPO = 'seeyourdata/seeyourdata';
+export const REPO = 'skraptt/seeyourdata';
 
 /**
  * Link to a pre-filled GitHub issue suggesting a tracker. Nothing is sent

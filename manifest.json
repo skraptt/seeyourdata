@@ -4,6 +4,7 @@
   "short_name": "SeeYourData",
   "version": "0.1.0",
   "description": "See which personal data the website you're on can collect, and which companies receive it.",
+  "homepage_url": "https://github.com/skraptt/seeyourdata",
   "minimum_chrome_version": "111",
   "icons": {
     "16": "icons/icon-16.png",
@@ -23,19 +24,36 @@
     "service_worker": "src/background.js",
     "type": "module"
   },
-  "permissions": ["webRequest", "storage", "tabs", "cookies"],
-  "host_permissions": ["<all_urls>"],
+  "permissions": [
+    "webRequest",
+    "storage",
+    "tabs",
+    "cookies"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
   "content_scripts": [
     {
-      "matches": ["http://*/*", "https://*/*"],
-      "js": ["src/inject.js"],
+      "matches": [
+        "http://*/*",
+        "https://*/*"
+      ],
+      "js": [
+        "src/inject.js"
+      ],
       "run_at": "document_start",
       "all_frames": true,
       "world": "MAIN"
     },
     {
-      "matches": ["http://*/*", "https://*/*"],
-      "js": ["src/content.js"],
+      "matches": [
+        "http://*/*",
+        "https://*/*"
+      ],
+      "js": [
+        "src/content.js"
+      ],
       "run_at": "document_start",
       "all_frames": true
     }

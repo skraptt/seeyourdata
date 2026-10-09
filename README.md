@@ -18,7 +18,7 @@ The toolbar badge shows how many tracking companies are on the current page, col
 
 From source (until it's on the Chrome Web Store):
 
-1. Download or clone this repository.
+1. Download this repository: on [github.com/skraptt/seeyourdata](https://github.com/skraptt/seeyourdata) click **Code → Download ZIP**, then unzip it.
 2. Open `chrome://extensions` in Chrome, Edge, Brave or any Chromium browser (version 111 or newer).
 3. Turn on **Developer mode** (top right).
 4. Click **Load unpacked** and choose the `seeyourdata` folder.
@@ -108,7 +108,7 @@ Use `--accept-consent` when crawling from the EU or UK: most large sites load no
 
 **Reports from users.** In the popup's "Who gets it" tab, every unknown server has a **Report** button, and every company has a "Suggest a correction" link. They open a pre-filled GitHub issue (`.github/ISSUE_TEMPLATE/tracker.yml`) containing only the server's domain and the website's domain. Nothing is sent until the person reviews and submits the form on GitHub.
 
-If you fork the project, set your repository in `src/config.js` so these links point to it.
+Reports go to [github.com/skraptt/seeyourdata/issues](https://github.com/skraptt/seeyourdata/issues). If you fork the project, set your own repository in `src/config.js`.
 
 ## Contributing
 
