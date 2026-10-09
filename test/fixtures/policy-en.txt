@@ -1,0 +1,9 @@
+Privacy Policy. Last updated: 12 March 2026.
+Example Shop GmbH is the data controller responsible for the processing of your personal data. You can contact our data protection officer at dpo@example-shop.test.
+What we collect. When you place an order we collect your name, email address, postal address and payment information. When you browse our website we automatically collect your IP address, browser type, operating system and the pages you visit.
+Why we use it. We use your data to provide our services and fulfil your orders. We use Google Analytics to measure the use of our website. With your consent, we use Meta pixels for advertising and retargeting.
+Legal bases. We process data for the performance of a contract (Art. 6(1)(b) GDPR), on the basis of your consent (Art. 6(1)(a) GDPR) and our legitimate interests in security and fraud prevention (Art. 6(1)(f) GDPR).
+Sharing. We share data with service providers such as payment processors and hosting providers. Some recipients are located outside the EEA; transfers to the United States rely on the EU-U.S. Data Privacy Framework or standard contractual clauses.
+We do not sell your personal information.
+Retention. We retain order data for 10 years to comply with legal obligations under tax law. Analytics data is deleted after 14 months.
+Your rights. You have the right of access, rectification, erasure, restriction of processing, data portability and the right to object to processing. You may withdraw your consent at any time. You also have the right to lodge a complaint with a supervisory authority.

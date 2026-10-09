@@ -2,6 +2,7 @@ import { analyze, plural } from '../src/lib/analyze.js';
 import { isWebUrl } from '../src/lib/domain.js';
 import { CATEGORIES } from '../src/lib/trackers.js';
 import { reportUrl } from '../src/config.js';
+import { analyzePolicy } from '../src/lib/policy.js';
 
 const app = document.getElementById('app');
 const live = document.getElementById('live');
@@ -11,6 +12,9 @@ let pageUrl = '';
 let lastJson = '';
 let activeTab = 'collects';
 let currentSite = '';
+let lastData = null;
+// Privacy-policy reading state for the current site.
+let policy = { status: 'idle', site: '', url: '', text: '', error: '', cacheChecked: false };
 const open = new Set(); // keys of expanded rows, kept across live refreshes
 
 // ---- Tiny safe templating ----------------------------------------------------
@@ -33,7 +37,11 @@ const ICONS = {
   globe: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.6 3 2.6 15 0 18M12 3c-2.6 3-2.6 15 0 18"/>',
   chevron: '<path d="M9 6l6 6-6 6"/>',
   external: '<path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/>',
-  shield: '<path d="M12 3l8 3v6c0 4.5-3.4 8-8 9-4.6-1-8-4.5-8-9V6z"/><path d="M9 12l2 2 4-4"/>'
+  shield: '<path d="M12 3l8 3v6c0 4.5-3.4 8-8 9-4.6-1-8-4.5-8-9V6z"/><path d="M9 12l2 2 4-4"/>',
+  check: '<path d="M5 12.5l4.5 4.5L19 7"/>',
+  dash: '<path d="M7 12h10"/>',
+  alert: '<path d="M12 4l9 16H3z"/><path d="M12 10v4"/><path d="M12 17.2v.3"/>',
+  doc: '<path d="M7 3h7l5 5v13H7z"/><path d="M14 3v5h5M10 13h6M10 17h6"/>'
 };
 const icon = (name, cls = 'icon') =>
   raw(`<svg class="${cls}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[name] || ''}</svg>`);
@@ -74,7 +82,12 @@ async function refresh() {
   const json = JSON.stringify(data);
   if (json === lastJson) return;
   lastJson = json;
+  lastData = data;
   render(data);
+}
+
+function rerender() {
+  if (lastData) render(lastData);
 }
 
 // ---- Rendering -------------------------------------------------------------
@@ -96,6 +109,8 @@ function render(data) {
 
   const r = data.report;
   currentSite = r.site;
+  if (policy.site !== r.site) policy = { status: 'idle', site: r.site, url: '', text: '', error: '', cacheChecked: false };
+  if (!policy.cacheChecked && r.policyUrl) checkPolicyCache(r.policyUrl);
   const fresh = data.startedAt && Date.now() - data.startedAt < 15000;
   live.hidden = !fresh;
 
@@ -117,6 +132,7 @@ function render(data) {
     <nav class="tabs" role="tablist">
       ${tabButton('collects', 'Your data', r.kinds.length)}
       ${tabButton('companies', 'Who gets it', r.companies.length + r.unknown.length)}
+      ${tabButton('policy', 'Policy')}
       ${tabButton('details', 'Details')}
     </nav>
 
@@ -128,6 +144,10 @@ function render(data) {
       ${r.companies.length ? each(r.companies, companyRow) : raw('')}
       ${r.unknown.length ? raw(unknownBlock(r.unknown)) : raw('')}
       ${!r.companies.length && !r.unknown.length ? raw('<p class="none">This page only talks to its own servers.</p>') : raw('')}
+    </section>
+
+    <section class="panel" id="panel-policy" role="tabpanel" ${raw(activeTab === 'policy' ? '' : 'hidden')}>
+      ${raw(policyPanel(r))}
     </section>
 
     <section class="panel" id="panel-details" role="tabpanel" ${raw(activeTab === 'details' ? '' : 'hidden')}>
@@ -235,6 +255,15 @@ function detailsPanel(r) {
 
 function wire() {
   app.querySelector('#reload')?.addEventListener('click', () => chrome.tabs.reload(tabId));
+  for (const b of app.querySelectorAll('[data-action]')) {
+    b.addEventListener('click', () => {
+      const r = lastData?.report;
+      if (!r) return;
+      if (b.dataset.action === 'read-policy') readPolicy(r.policyUrl, false);
+      if (b.dataset.action === 'read-page') readPolicy(r.url, true);
+      if (b.dataset.action === 'policy-reset') { policy = { ...policy, status: 'idle', text: '', error: '' }; rerender(); }
+    });
+  }
   for (const b of app.querySelectorAll('[data-tab]')) {
     b.addEventListener('click', () => {
       activeTab = b.dataset.tab;
@@ -252,6 +281,184 @@ function wire() {
   for (const d of app.querySelectorAll('details[data-key]')) {
     d.addEventListener('toggle', () => (d.open ? open.add(d.dataset.key) : open.delete(d.dataset.key)));
   }
+}
+
+
+// ---- Privacy policy --------------------------------------------------------------
+// The policy is downloaded from the site itself (without cookies) and read here,
+// on this computer. Nothing is sent anywhere else.
+
+const cacheKey = (url) => 'policy:' + url;
+
+async function checkPolicyCache(url) {
+  policy.cacheChecked = true;
+  try {
+    const hit = (await chrome.storage.session.get(cacheKey(url)))[cacheKey(url)];
+    if (hit?.text && policy.status === 'idle') {
+      policy = { ...policy, status: 'done', url, text: hit.text };
+      rerender();
+    }
+  } catch { /* no cache */ }
+}
+
+function htmlToText(source) {
+  const doc = new DOMParser().parseFromString(source, 'text/html');
+  doc.querySelectorAll('script, style, noscript, svg, iframe, template, nav, form, button, [aria-hidden="true"]').forEach((e) => e.remove());
+  const candidates = [...doc.querySelectorAll('main, article, [role="main"]')];
+  const best = candidates.sort((a, b) => b.textContent.length - a.textContent.length)[0];
+  const root = best && best.textContent.trim().length > 1500 ? best : doc.body;
+  if (!root) return '';
+  root.querySelectorAll('p, li, h1, h2, h3, h4, h5, h6, div, br, tr, section, dd, dt, td').forEach((e) => e.append(doc.createTextNode('\n')));
+  return (root.textContent || '').replace(/[ \t ]+/g, ' ').replace(/\n\s*\n+/g, '\n').trim();
+}
+
+const wordCount = (t) => (t.match(/\S+/g) || []).length;
+
+async function textFromTab(id) {
+  const res = await chrome.tabs.sendMessage(id, { type: 'syd:getText' });
+  return res?.text || '';
+}
+
+// Some policies are built by JavaScript, so a plain download is nearly empty.
+// Then open the policy in a background tab, take its text, and close it.
+async function textViaBackgroundTab(url) {
+  const tab = await chrome.tabs.create({ url, active: false });
+  try {
+    await new Promise((resolve) => {
+      const timer = setTimeout(done, 20000);
+      function done() {
+        clearTimeout(timer);
+        chrome.tabs.onUpdated.removeListener(onUpdated);
+        resolve();
+      }
+      function onUpdated(id, info) {
+        if (id === tab.id && info.status === 'complete') done();
+      }
+      chrome.tabs.onUpdated.addListener(onUpdated);
+    });
+    await new Promise((r) => setTimeout(r, 1500));
+    return await textFromTab(tab.id);
+  } finally {
+    chrome.tabs.remove(tab.id).catch(() => {});
+  }
+}
+
+async function readPolicy(url, fromThisPage) {
+  if (!url) return;
+  policy = { ...policy, status: 'loading', url, error: '' };
+  rerender();
+  try {
+    let text = '';
+    if (fromThisPage) {
+      text = await textFromTab(tabId);
+    } else {
+      const res = await fetch(url, { credentials: 'omit', redirect: 'follow' });
+      if (!res.ok) throw new Error(`The site answered with an error (${res.status}).`);
+      const type = res.headers.get('content-type') || '';
+      if (/pdf/i.test(type)) throw new Error('This privacy policy is a PDF, which SeeYourData can’t read yet. Open it to read it yourself.');
+      text = /html|xml/i.test(type) || !type ? htmlToText(await res.text()) : await res.text();
+      if (wordCount(text) < 300) {
+        const fromTab = await textViaBackgroundTab(url).catch(() => '');
+        if (wordCount(fromTab) > wordCount(text)) text = fromTab;
+      }
+    }
+    if (wordCount(text) < 40) throw new Error('The page came back almost empty, so there was nothing to read.');
+    text = text.slice(0, 400000);
+    policy = { ...policy, status: 'done', url, text };
+    chrome.storage.session.set({ [cacheKey(url)]: { text, at: Date.now() } }).catch(() => {});
+  } catch (e) {
+    const message = /Receiving end does not exist|Could not establish connection/i.test(e.message)
+      ? 'This page can’t be read yet. Reload it and try again.'
+      : /Failed to fetch|NetworkError/i.test(e.message)
+        ? 'The policy couldn’t be downloaded. Check your connection, or open the policy and use “Read this page”.'
+        : e.message;
+    policy = { ...policy, status: 'error', error: message };
+  }
+  rerender();
+}
+
+function policyPanel(r) {
+  const onPolicyPage = r.policyUrl && stripHash(r.policyUrl) === stripHash(r.url);
+  const readButtons = r.policyUrl && !onPolicyPage
+    ? html`<button type="button" class="btn primary" data-action="read-policy">Read the privacy policy</button>
+           <button type="button" class="btn link" data-action="read-page">This page is the policy? Read this page</button>`
+    : html`<button type="button" class="btn primary" data-action="read-page">${onPolicyPage ? 'Read this privacy policy' : 'Read this page as the policy'}</button>`;
+
+  if (policy.status === 'loading') {
+    return html`<div class="pol-intro"><p class="pol-loading"><span class="spinner" aria-hidden="true"></span>Reading the privacy policy…</p></div>`;
+  }
+  if (policy.status === 'error') {
+    return html`<div class="pol-intro">${icon('alert', 'pol-intro-icon warn')}<h2>Couldn’t read the policy</h2><p>${policy.error}</p><div class="btns">${raw(readButtons)}</div></div>`;
+  }
+  if (policy.status !== 'done') {
+    return html`<div class="pol-intro">
+      ${icon('doc', 'pol-intro-icon')}
+      <h2>What does ${r.site}’s privacy policy say?</h2>
+      ${r.policyUrl || onPolicyPage
+        ? raw(html`<p>SeeYourData will download the policy and read it on your computer. You’ll see what it says about your data, and anything this page does that the policy leaves out. Nothing is sent anywhere else.</p>`)
+        : raw(html`<p>There’s no privacy policy link on this page. Open the site’s privacy policy (often linked at the bottom of the home page), then come back here.</p>`)}
+      <div class="btns">${raw(readButtons)}</div>
+    </div>`;
+  }
+
+  const a = analyzePolicy(policy.text, { companies: r.companies, kinds: r.kinds });
+  const meta = [`About ${a.minutes} minute${a.minutes === 1 ? '' : 's'} to read.`, a.updated ? `Last updated ${a.updated}.` : 'No date of last update found.'];
+
+  return html`
+    <section class="pol-summary rating-${a.rating}">
+      <div class="pol-score" aria-label="${a.covered} of ${a.total}"><b>${a.covered}</b><span>/${a.total}</span></div>
+      <div class="pol-summary-text">
+        <h2>Covers ${a.covered} of ${a.total} things GDPR says a privacy notice must tell you</h2>
+        <p>${meta.join(' ')}</p>
+        <a href="${policy.url}" target="_blank" rel="noopener noreferrer">${icon('external')}Open the policy</a>
+      </div>
+    </section>
+
+    ${a.tooShort || !a.looksLikePolicy ? raw(html`<p class="notice">This doesn’t look like a full privacy policy, so the results may be incomplete. If the real policy is on another page, open it and use “Read this page”.</p>`) : raw('')}
+
+    ${a.gaps.length ? raw(html`<section class="pol-gaps">
+      <h3>${icon('alert')}On this page, but not in the policy</h3>
+      <ul>${each(a.gaps, (g) => html`<li>${g.text}</li>`)}</ul>
+      <p class="fine">The policy might still cover these with general wording such as “our partners”.</p>
+    </section>`) : raw('')}
+
+    ${raw(policyGroup('What they say they collect', 'pd', a.data))}
+    ${raw(policyGroup('Why they use it', 'pp', a.purposes))}
+    ${raw(policyGroup('Legal reasons they give', 'pb', a.bases))}
+    ${raw(policyGroup('Your rights they explain', 'pr', a.rights))}
+    ${raw(policyGroup('What a GDPR notice must include', 'pc', a.checklist.map((c) => ({ ...c, label: c.optional ? c.label + ' (not always required)' : c.label }))))}
+
+    <h3 class="pol-h">Companies the policy names</h3>
+    ${a.named.length
+      ? raw(html`<div class="chips">${each(a.named, (n) => html`<span class="chip">${n}</span>`)}</div>`)
+      : raw('<p class="fine">It doesn’t name any of the tracking companies SeeYourData knows.</p>')}
+
+    <p class="limits">Read automatically by looking for key words in English, German and Turkish. It can miss or misread things, and it isn’t legal advice. Tap a line to see the sentence it’s based on.</p>
+    <button type="button" class="btn link" data-action="policy-reset">Read a different page</button>
+  `;
+}
+
+function policyGroup(title, prefix, items) {
+  const sorted = [...items].sort((x, y) => (y.found ? 1 : 0) - (x.found ? 1 : 0));
+  return html`<h3 class="pol-h">${title}</h3><div class="pol-list">${each(sorted, (it) => policyItem(prefix, it))}</div>`;
+}
+
+function policyItem(prefix, it) {
+  const key = prefix + ':' + it.id;
+  const state = it.found ? (it.warn || it.sensitive ? 'warn' : 'yes') : it.denied ? 'denied' : 'no';
+  const mark = state === 'no' ? icon('dash') : state === 'warn' ? icon('alert') : icon('check');
+  const note = state === 'no' ? 'Not mentioned' : state === 'denied' ? 'Says it doesn’t' : '';
+  if (!it.quote) {
+    return html`<div class="pi pi-${state}"><span class="pi-mark">${mark}</span><span class="pi-label">${it.label}</span>${note ? raw(html`<span class="pi-note">${note}</span>`) : ''}</div>`;
+  }
+  return html`<details class="pi pi-${state}" data-key="${key}" ${raw(open.has(key) ? 'open' : '')}>
+    <summary><span class="pi-mark">${mark}</span><span class="pi-label">${it.label}</span>${note ? raw(html`<span class="pi-note">${note}</span>`) : ''}</summary>
+    <blockquote>${it.quote}</blockquote>
+  </details>`;
+}
+
+function stripHash(u) {
+  try { const x = new URL(u); x.hash = ''; return x.href.replace(/\/$/, ''); } catch { return u; }
 }
 
 const hostOf = (u) => { try { return new URL(u).hostname.replace(/^www\./, ''); } catch { return u; } };

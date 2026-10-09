@@ -38,6 +38,10 @@ Patterns see only the path (no query string). Make them specific: a pattern that
 
 Issues labelled `tracker-list` come from the popup. Check the domain the same way as above. If it's a tracker, add it and close the issue with the commit. If it's a site's own server, close it with a short note.
 
+## Improving the privacy-policy reader
+
+`src/lib/policy.js` finds things by wording. When it misses something in a real policy, add the phrase to the matching rule and add the sentence to a test in `test/policy.test.js`. Adding a new language means adding its wording to every rule and a sample policy in `test/fixtures/`. Keep patterns specific enough that ordinary text doesn't match.
+
 ## Changing detection or the popup
 
 - Keep `src/lib/analyze.js` free of browser APIs so it stays unit-testable. Add a test in `test/analyze.test.js` for new behaviour.

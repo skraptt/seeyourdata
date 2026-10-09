@@ -25,6 +25,15 @@ PAGE=b"""<!doctype html><html><head><title>Demo Shop</title>
 const c=document.createElement('canvas');c.width=200;c.height=50;c.getContext('2d').fillText('hi',2,2);c.toDataURL();
 navigator.geolocation && navigator.geolocation.getCurrentPosition(()=>{},()=>{});</script>
 <footer><a href="/privacy">Privacy Policy</a></footer></body></html>"""
+POLICY_HTML=b"""<!doctype html><html><head><title>Privacy Policy</title></head><body>
+<nav><a href="/">Home</a></nav><main><h1>Privacy Policy</h1><p>Last updated: 12 March 2026</p>
+<p>Demo Shop GmbH is the data controller responsible for processing your personal data.</p>
+<h2>What we collect</h2><p>When you order, we collect your name, email address, postal address and payment information. We also collect your IP address and browser type.</p>
+<h2>Why</h2><p>We use your data to provide our services and fulfil your orders. We use Google Analytics to measure the use of our website and, with your consent, the Meta pixel for advertising.</p>
+<h2>Legal bases</h2><p>We rely on the performance of a contract and your consent.</p>
+<h2>Sharing</h2><p>We share data with service providers such as payment processors.</p>
+<h2>Your rights</h2><p>You have the right of access, rectification and erasure. You may withdraw your consent at any time.</p>
+</main></body></html>"""
 TRACKER_JS=b"(function(){var c=document.createElement('canvas');c.width=300;c.height=60;var x=c.getContext('2d');x.fillText('fp',1,1);c.toDataURL();})();"
 
 class H(http.server.BaseHTTPRequestHandler):
@@ -32,7 +41,7 @@ class H(http.server.BaseHTTPRequestHandler):
     def do_GET(self):
         host=self.headers.get('Host','')
         if self.server.server_address[1]==8100:
-            body,ct=PAGE,'text/html'
+            body,ct=(POLICY_HTML,'text/html') if self.path.startswith('/privacy') else (PAGE,'text/html')
         else:
             body,ct=(TRACKER_JS,'text/javascript') if self.path.endswith('.js') else (b'GIF89a',"image/gif")
         self.send_response(200); self.send_header('Content-Type',ct)
@@ -72,5 +81,12 @@ with sync_playwright() as p:
         pop.click('[data-tab=companies]'); time.sleep(0.2); pop.click('details.unknown summary'); pop.click('details[data-key="c:Amplitude"] summary')
         pop.screenshot(path=f'{OUT}/companies-{scheme}.png',full_page=True)
         pop.click('[data-tab=details]'); pop.screenshot(path=f'{OUT}/details-{scheme}.png',full_page=True)
+        pop.click('[data-tab=policy]'); time.sleep(0.2)
+        pop.screenshot(path=f'{OUT}/policy-intro-{scheme}.png',full_page=True)
+        if not pop.query_selector('.pol-summary'): pop.click('[data-action=read-policy]')  # second run uses the remembered result
+        pop.wait_for_selector('.pol-summary', timeout=15000)
+        pop.click('details[data-key="pd:contact"] summary')
+        pop.screenshot(path=f'{OUT}/policy-{scheme}.png',full_page=True)
+        print(scheme, 'POLICY', pop.inner_text('.pol-summary h2'), '|', (pop.inner_text('.pol-gaps') if pop.query_selector('.pol-gaps') else 'no gaps').replace(chr(10), ' / '))
         print(scheme,'POPUP ERRORS',perr)
     ctx.close()

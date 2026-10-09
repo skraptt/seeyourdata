@@ -98,6 +98,19 @@
     return null;
   }
 
+  // ---- 5. Page text, only when the popup asks to read a privacy policy ----------
+  function readableText() {
+    const candidates = [...document.querySelectorAll('main, article, [role="main"]')];
+    const best = candidates.sort((a, b) => b.innerText.length - a.innerText.length)[0];
+    const el = best && best.innerText.length > 1500 ? best : document.body;
+    return (el?.innerText || '').slice(0, 400000);
+  }
+  if (isTop) {
+    chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
+      if (msg?.type === 'syd:getText') sendResponse({ text: readableText(), url: location.href });
+    });
+  }
+
   // ---- Reporting ------------------------------------------------------------
   let last = '';
   function send() {

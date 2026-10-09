@@ -7,6 +7,7 @@ SeeYourData is a free, open-source Chrome extension. Click its icon on any websi
 - **A grade from A to F** for how exposed you are on this page.
 - **Your data**: what the page can learn about you, such as a fingerprint of your device, your location, your clicks and typing, IDs that follow you across sites, or the details its forms ask for.
 - **Who gets it**: the companies this page sends data to (Google, Meta, Hotjar, ad exchanges…), what each one does, and which of their servers were contacted.
+- **Policy**: reads the site's privacy policy for you (in English, German or Turkish) and shows what it says it collects and why, the legal reasons it gives, which of your rights it explains, and how many of the things GDPR requires a privacy notice to include are actually there. It also lists **what the page does that the policy leaves out**, such as a session recorder the policy never names.
 - **Details**: request counts, cookies, site storage, and how the grade is calculated.
 - A direct link to the site's **privacy policy**, when the page has one.
 
@@ -40,6 +41,7 @@ Everything happens locally in your browser. SeeYourData makes no network request
 | Personal-data forms | Scans form fields for email, name, phone, address, birthday, password, card number and ID numbers (by type, `autocomplete`, name and label). Only field *types* are counted, never what you type. | `src/content.js` |
 | Privacy policy | Looks for a "privacy" link in multiple languages. | `src/content.js` |
 | Grade and wording | Pure function from the observations to the report. | `src/lib/analyze.js` |
+| Privacy policy | When you ask, downloads the policy and matches key phrases (English, German, Turkish) for data collected, purposes, GDPR legal bases (Art. 6), your rights (Art. 15-22, 77) and the information Art. 13 requires. Every finding links to the sentence it's based on. It then compares the policy with what the page did. Keyword matching, not legal advice. | `src/lib/policy.js` |
 
 Each finding is labelled:
 
@@ -74,6 +76,7 @@ src/
   inject.js         runs in the page: fingerprinting/location API hooks
   lib/
     analyze.js      observations -> report (grade, data kinds, companies)
+    policy.js       privacy policy text -> summary and gaps
     trackers.js     tracker database
     domain.js       host / registrable-domain helpers
 popup/              the popup UI (HTML, CSS, JS, no frameworks)
