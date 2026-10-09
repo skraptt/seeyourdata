@@ -47,6 +47,8 @@ Found a tracker we don't know? Use the Report button in the popup.
 - Store icon: comes from the extension (`icons/icon-128.png`)
 - Screenshots (1280×800): `screenshot-1.png` to `screenshot-4.png`, in that order
 - Small promo tile (440×280): `promo-small-440x280.png`
+- Marquee promo tile (1400×560, optional): `promo-marquee-1400x560.png`
+- Promo video: leave empty
 
 **Homepage URL:** https://github.com/skraptt/seeyourdata
 **Support URL:** https://github.com/skraptt/seeyourdata/issues
